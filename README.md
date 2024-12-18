@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ## Osmani
 
 Osmani Customization
@@ -5,3 +6,7 @@ Osmani Customization
 #### License
 
 mit
+=======
+# Osmani
+Psmani Customization
+>>>>>>> origin/main
