@@ -17,6 +17,7 @@
   {
    "fieldname": "cheque_book_name",
    "fieldtype": "Data",
+   "in_list_view": 1,
    "in_preview": 1,
    "label": "Cheque Book Name"
   },
@@ -24,6 +25,7 @@
    "default": "0",
    "fieldname": "enable",
    "fieldtype": "Check",
+   "in_list_view": 1,
    "in_preview": 1,
    "label": "Enable"
   },
@@ -35,6 +37,7 @@
    "fieldname": "cheque_from",
    "fieldtype": "Int",
    "in_preview": 1,
+   "in_standard_filter": 1,
    "label": "Cheque From"
   },
   {
@@ -45,13 +48,14 @@
    "fieldname": "cheque_to",
    "fieldtype": "Int",
    "in_preview": 1,
+   "in_standard_filter": 1,
    "label": "Cheque To"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-09-16 11:39:33.511573",
+ "modified": "2025-09-16 12:21:57.862186",
  "modified_by": "Administrator",
  "module": "Osmani",
  "name": "Cheque Book",
