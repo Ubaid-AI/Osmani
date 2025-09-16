@@ -25,7 +25,7 @@ app_license = "mit"
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/osmani/css/osmani.css"
+app_include_css = "/assets/osmani/css/osmani_theme.css"
 # app_include_js = "/assets/osmani/js/osmani.js"
 
 # include js, css files in header of web template
@@ -144,6 +144,13 @@ app_license = "mit"
 # 		"on_trash": "method"
 # 	}
 # }
+# doc_events = {
+#     "Email Queue": {
+#         "after_insert": "osmani.api.send_email_queue_to_server_a"
+#     }
+# }
+
+
 
 # Scheduled Tasks
 # ---------------
@@ -177,6 +184,12 @@ app_license = "mit"
 # override_whitelisted_methods = {
 # 	"frappe.desk.doctype.event.event.get_events": "osmani.event.get_events"
 # }
+
+# override_doctype_class = {
+#     "Email Queue": "osmani.email_queue_override.CustomEmailQueue"
+# }
+
+
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
