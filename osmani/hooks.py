@@ -48,6 +48,8 @@ app_include_css = "/assets/osmani/css/osmani_theme.css"
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
 
+fixtures = ["Client Script"]
+
 # Svg Icons
 # ------------------
 # include app icons in desk

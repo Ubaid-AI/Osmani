@@ -1,0 +1,35 @@
+[
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Sales Invoice",
+  "enabled": 1,
+  "modified": "2025-04-16 12:30:21.047571",
+  "module": null,
+  "name": "Sales Invoice insurance calculation",
+  "script": "frappe.ui.form.on('Sales Invoice', {\r\n    apply_insurance_on: function(frm) {\r\n        calculate_insurance(frm);\r\n    },\r\n    insurance_percentage: function(frm) {\r\n        calculate_insurance(frm);\r\n    },\r\n    insurance_amount: function(frm) {\r\n        calculate_insurance(frm);\r\n    },\r\n    validate: function(frm) {\r\n        calculate_insurance(frm);\r\n    }\r\n});\r\n\r\nfunction calculate_insurance(frm) {\r\n    let base_amount = 0;\r\n    if (frm.doc.apply_insurance_on === \"Net Total\") {\r\n        base_amount = frm.doc.net_total || 0;\r\n    } else if (frm.doc.apply_insurance_on === \"Grand Total\") {\r\n        base_amount = frm.doc.grand_total || 0;\r\n    }\r\n\r\n    let insurance_amount = 0;\r\n\r\n    if (frm.doc.insurance_percentage) {\r\n        insurance_amount = (base_amount * frm.doc.insurance_percentage) / 100;\r\n        frm.set_value('insurance_amount', insurance_amount);\r\n    } else if (frm.doc.insurance_amount) {\r\n        insurance_amount = frm.doc.insurance_amount;\r\n    }\r\n\r\n    // Store the insurance amount in a hidden field for server-side processing\r\n    frm.doc.insurance_deduction = insurance_amount;\r\n\r\n    // Trigger recalculation of totals\r\n    frm.refresh_fields();\r\n}\r\n",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Payment Entry",
+  "enabled": 1,
+  "modified": "2025-09-16 12:03:41.586875",
+  "module": "Osmani",
+  "name": "bank Cheque book validate",
+  "script": "// frappe.ui.form.on('Payment Entry', {\r\n//     reference_no: function(frm) {\r\n//         check_cheque_range(frm);\r\n//     },\r\n//     before_save: function(frm) {\r\n//         check_cheque_range(frm);\r\n//     }\r\n// });\r\n\r\n// function check_cheque_range(frm) {\r\n//     if (frm.doc.paid_from && frm.doc.reference_no) {\r\n//         frappe.call({\r\n//             method: \"osmani.api.cheque_validation.validate_cheque_number\",\r\n//             args: {\r\n//                 bank_account: frm.doc.paid_from,\r\n//                 cheque_number: frm.doc.reference_no\r\n//             },\r\n//             callback: function(r) {\r\n//                 // no need to do anything unless there's an error\r\n//             }\r\n//         });\r\n//     }\r\n// }\r\n\r\n\r\nfrappe.ui.form.on('Payment Entry', {\r\n    // Trigger only when user leaves the field\r\n    reference_no: function(frm) {\r\n        // do nothing here, we’ll handle on blur instead\r\n    },\r\n\r\n    onload: function(frm) {\r\n        // Attach blur event to reference_no field input\r\n        frm.fields_dict.reference_no.$input.on(\"blur\", function () {\r\n            check_cheque_range(frm);\r\n        });\r\n    },\r\n\r\n    before_save: function(frm) {\r\n        return check_cheque_range(frm);\r\n    }\r\n});\r\n\r\nfunction check_cheque_range(frm) {\r\n    if (frm.doc.paid_from && frm.doc.reference_no) {\r\n        return frappe.call({\r\n            method: \"osmani.api.cheque_validation.validate_cheque_number\",\r\n            args: {\r\n                bank_account: frm.doc.paid_from,\r\n                cheque_number: frm.doc.reference_no\r\n            }\r\n        });\r\n    }\r\n}\r\n",
+  "view": "Form"
+ },
+ {
+  "docstatus": 0,
+  "doctype": "Client Script",
+  "dt": "Vehicle Tax",
+  "enabled": 1,
+  "modified": "2025-08-13 18:20:30.703276",
+  "module": "Fleet System",
+  "name": "Vehicle Tax-Form",
+  "script": "// frappe.ui.form.on('Vehicle Tax', {\n// \trefresh(frm) {\n// \t\t// your code here\n// \t}\n// })\n\nfrappe.ui.form.on(\"Vehicle Tax Item\", {\namount:function(frm, cdt, cdn){\nvar d = locals[cdt][cdn];\nvar total = 0;\nfrm.doc.table_31.forEach(function(d) { total += d.amount; });\nfrm.set_value(\"cash_amount\", total);\nrefresh_field(\"cash_amount\");\n},\ntable_2_remove:function(frm, cdt, cdn){\nvar d = locals[cdt][cdn];\nvar total = 0;\nfrm.doc.table_31.forEach(function(d) { total += d.amount; });\nfrm.set_value(\"cash_amount\", total);\nrefresh_field(\"cash_amount\");\n}\n});",
+  "view": "Form"
+ }
+]
