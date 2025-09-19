@@ -25,7 +25,10 @@
 import frappe
 
 @frappe.whitelist()
-def validate_cheque_number(bank_account, cheque_number):
+def validate_cheque_number(bank_account, cheque_number, payment_type=None):
+    # Run validation only if payment_type is Internal Transfer
+    if payment_type != "Internal Transfer":
+        return  # do nothing
     if not bank_account or not cheque_number:
         frappe.throw("Bank account and cheque number are required.")
 
