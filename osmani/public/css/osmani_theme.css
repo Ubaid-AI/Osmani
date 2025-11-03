@@ -32,3 +32,11 @@ li.nav-item.dropdown.dropdown-help.dropdown-mobile.d-lg-block {
     background-color: #eddfdf !important;
     box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
 }
+
+.filter-row {
+    display: none !important;
+}
+
+.report-summary {
+    display: none !important;
+}

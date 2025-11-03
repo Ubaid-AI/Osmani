@@ -1,0 +1,35 @@
+{
+ "attach_print": 0,
+ "channel": "System Notification",
+ "condition": "doc.status in [\"Partly Paid\", \"Unpaid\", \"Submitted\"]",
+ "creation": "2025-10-10 15:09:04.694893",
+ "date_changed": "due_date",
+ "days_in_advance": 5,
+ "docstatus": 0,
+ "doctype": "Notification",
+ "document_type": "Purchase Invoice",
+ "enabled": 1,
+ "event": "Days Before",
+ "idx": 0,
+ "is_standard": 1,
+ "message": "",
+ "message_type": "Markdown",
+ "modified": "2025-10-10 15:09:04.694893",
+ "modified_by": "Administrator",
+ "module": "Osmani",
+ "name": "Purchase invoice pending",
+ "owner": "Administrator",
+ "recipients": [
+  {
+   "receiver_by_document_field": "owner",
+   "receiver_by_role": "Purchase Manager"
+  },
+  {
+   "receiver_by_document_field": "owner",
+   "receiver_by_role": "Purchase User"
+  }
+ ],
+ "send_system_notification": 0,
+ "send_to_all_assignees": 0,
+ "subject": "Pending Purchase Invoice {{ doc.name }}"
+}
