@@ -119,10 +119,12 @@ fixtures = ["Client Script"]
 # -----------
 # Permissions evaluated in scripted ways
 
-# permission_query_conditions = {
-# 	"Event": "frappe.desk.doctype.event.event.get_permission_query_conditions",
-# }
-#
+permission_query_conditions = {
+	"*": "osmani.osmani.doctype.user_record_filter.user_record_filter.permission_query_all",
+	"Purchase Invoice": "osmani.osmani.doctype.purchase_invoice_filter.purchase_invoice_filter.get_permission_query_conditions_purchase_invoice",
+	"Sales Order": "osmani.osmani.doctype.sales_order_filter.sales_order_filter.get_permission_query_conditions_sales_order",
+}
+
 # has_permission = {
 # 	"Event": "frappe.desk.doctype.event.event.has_permission",
 # }
