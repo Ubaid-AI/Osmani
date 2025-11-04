@@ -137,15 +137,105 @@ def get_permission_query_conditions(doctype, user=None):
 		return ""
 		
 	user_filters = get_user_filters(user)
-	conditions = []
+	
+	# Group details by field and operator to support OR across same field
+	field_groups = {}
+	misc_conditions = []
+	
+	def resolve_values(detail):
+		"""Return list of values for a detail, handling special tokens and lists"""
+		val = detail.filter_value
+		if val == "session_user":
+			return [user]
+		elif val == "session_user_roles":
+			roles = frappe.get_roles(user)
+			return roles
+		elif detail.restriction_type in ("in", "not_in"):
+			return [v.strip() for v in (val or "").split(",") if v.strip()]
+		else:
+			return [val]
 	
 	for filter_doc in user_filters:
 		for detail in filter_doc.get("details", []):
-			if detail.doctype_name == doctype and detail.active:
-				condition = build_condition(detail, user)
-				if condition:
-					conditions.append(condition)
-					
+			if detail.doctype_name != doctype or not detail.active:
+				continue
+			field = detail.field_name
+			grp = field_groups.setdefault(field, {
+				"equals": set(),
+				"in": set(),
+				"like": [],
+				"not_equals": set(),
+				"not_in": set(),
+				"not_like": [],
+				"range": [],
+				"null_checks": []
+			})
+			rt = detail.restriction_type
+			values = resolve_values(detail)
+			if rt == "equals":
+				for v in values:
+					grp["equals"].add(v)
+			elif rt == "in":
+				for v in values:
+					grp["in"].add(v)
+			elif rt == "like":
+				for v in values:
+					grp["like"].append(v)
+			elif rt == "not_equals":
+				for v in values:
+					grp["not_equals"].add(v)
+			elif rt == "not_in":
+				for v in values:
+					grp["not_in"].add(v)
+			elif rt == "not_like":
+				for v in values:
+					grp["not_like"].append(v)
+			elif rt in ("greater_than", "less_than", "greater_than_equal", "less_than_equal"):
+				cond = build_condition(detail, user)
+				if cond:
+					grp["range"].append(cond)
+			elif rt in ("is_set", "is_not_set"):
+				cond = build_condition(detail, user)
+				if cond:
+					grp["null_checks"].append(cond)
+			else:
+				# fallback: use existing builder
+				cond = build_condition(detail, user)
+				if cond:
+					misc_conditions.append(cond)
+	
+	conditions = []
+	for field, grp in field_groups.items():
+		# positives: OR together
+		or_parts = []
+		allow_values = set()
+		allow_values.update(grp["equals"]) 
+		allow_values.update(grp["in"]) 
+		if allow_values:
+			escaped = ", ".join([frappe.db.escape(v) for v in allow_values])
+			or_parts.append(f"`{field}` IN ({escaped})")
+		for pattern in grp["like"]:
+			or_parts.append(f"`{field}` LIKE {frappe.db.escape(f'%{pattern}%')}")
+		if or_parts:
+			conditions.append("(" + " OR ".join(or_parts) + ")")
+		
+		# negatives: AND together
+		disallow = set()
+		disallow.update(grp["not_equals"]) 
+		disallow.update(grp["not_in"]) 
+		if disallow:
+			escaped = ", ".join([frappe.db.escape(v) for v in disallow])
+			conditions.append(f"`{field}` NOT IN ({escaped})")
+		for pattern in grp["not_like"]:
+			conditions.append(f"`{field}` NOT LIKE {frappe.db.escape(f'%{pattern}%')}")
+		for rc in grp["range"]:
+			conditions.append(rc)
+		for nc in grp["null_checks"]:
+			conditions.append(nc)
+	
+	# add any misc conditions that were not grouped
+	conditions.extend(misc_conditions)
+	
 	if conditions:
 		result = "(" + " AND ".join(conditions) + ")"
 		return result
