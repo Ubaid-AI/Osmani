@@ -89,12 +89,26 @@ frappe.query_reports["User Activity Report"] = {
                 const user = a.getAttribute("data-user");
                 const f = report.get_values();
 
+                // Normalize MultiSelectList value for doctypes to preserve in Detail and Back navigation
+                let dtList = f.doctype_list;
+                if (typeof dtList === "string" && dtList) {
+                    dtList = dtList.split(",").map(s => s.trim()).filter(Boolean);
+                }
+                if (!Array.isArray(dtList)) {
+                    dtList = dtList ? [dtList] : [];
+                }
+                // Ensure clicked doctype is included
+                if (!dtList.includes(doctype)) {
+                    dtList.push(doctype);
+                }
+
                 const route_opts = {
                     from_date: f.from_date,
                     to_date: f.to_date,
                     user: user,
                     doctype: doctype,
                     docstatus: f.docstatus,
+                    doctype_list: dtList
                 };
                 frappe.set_route("query-report", "User Activity Detail", route_opts);
             });
