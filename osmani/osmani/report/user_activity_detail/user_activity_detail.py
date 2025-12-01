@@ -69,7 +69,7 @@ def execute(filters=None):
         name_col["options"] = doctype
     columns = [
         name_col,
-        {"label": _("Doctype"), "fieldname": "doctype", "fieldtype": "Data", "width": 150},
+        {"label": _("Document"), "fieldname": "doctype", "fieldtype": "Data", "width": 150},
         {"label": _("User"), "fieldname": "user", "fieldtype": "Link", "options": "User", "width": 160},
         {"label": _("User Name"), "fieldname": "user_name", "fieldtype": "Data", "width": 180},
         {"label": _("Status"), "fieldname": "status", "fieldtype": "Data", "width": 100},
@@ -155,6 +155,7 @@ def execute(filters=None):
     status_case = "CASE t.docstatus WHEN 0 THEN 'Draft' WHEN 1 THEN 'Submitted' WHEN 2 THEN 'Cancelled' END AS status"
 
     select_parts = [
+        f"'{doctype}' AS doctype",
         "t.name AS name",
         "t.owner AS user",
         join_user_name,
