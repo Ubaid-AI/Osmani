@@ -35,8 +35,26 @@ frappe.query_reports["User Activity Detail"] = {
             });
         });
 
-        report.page.add_button("Export", () => {
-            frappe.query_report.download();
-        });
+        // Robust Export to Excel (uses built-in if available, else falls back to API)
+        const download_excel = (report_name, filters) => {
+            try {
+                if (frappe.query_report && typeof frappe.query_report.download === "function") {
+                    frappe.query_report.download();
+                    return;
+                }
+            } catch (e) {
+                // ignore and use fallback
+            }
+            const url = "/api/method/frappe.desk.query_report.download" +
+                `?report_name=${encodeURIComponent(report_name)}` +
+                `&file_format=Excel` +
+                `&filters=${encodeURIComponent(JSON.stringify(filters || {}))}`;
+            window.open(url);
+        };
+
+        // report.page.add_button("Export Excel", () => {
+        //     const f = report.get_values();
+        //     download_excel("User Activity Detail", f);
+        // });
     }
 };

@@ -46,9 +46,57 @@ frappe.query_reports["User Activity Report"] = {
     ],
     onload: function(report) {
         report.page.set_title("User Activity Summary");
-        // Add export button
-        report.page.add_button("Export", () => {
-            frappe.query_report.download();
+
+        // Robust Export to Excel (uses built-in if available, else falls back to API)
+        const download_excel = (report_name, filters) => {
+            try {
+                if (frappe.query_report && typeof frappe.query_report.download === "function") {
+                    frappe.query_report.download();
+                    return;
+                }
+            } catch (e) {
+                // ignore and use fallback
+            }
+            const url = "/api/method/frappe.desk.query_report.download" +
+                `?report_name=${encodeURIComponent(report_name)}` +
+                `&file_format=Excel` +
+                `&filters=${encodeURIComponent(JSON.stringify(filters || {}))}`;
+            window.open(url);
+        };
+
+        // report.page.add_button("Export Excel", () => {
+        //     const f = report.get_values();
+        //     download_excel("User Activity Report", f);
+        // });
+
+        // Event delegation for clickable counts to ensure navigation works reliably
+        report.$wrapper.on("click", "a.count-link", (ev) => {
+            ev.preventDefault();
+            const a = ev.currentTarget;
+            const doctype = a.getAttribute("data-doctype");
+            const user = a.getAttribute("data-user");
+            const f = report.get_values();
+
+            let dtList = f.doctype_list;
+            if (typeof dtList === "string" && dtList) {
+                dtList = dtList.split(",").map(s => s.trim()).filter(Boolean);
+            }
+            if (!Array.isArray(dtList)) {
+                dtList = dtList ? [dtList] : [];
+            }
+            if (!dtList.includes(doctype)) {
+                dtList.push(doctype);
+            }
+
+            const route_opts = {
+                from_date: f.from_date,
+                to_date: f.to_date,
+                user: user,
+                doctype: doctype,
+                docstatus: f.docstatus,
+                doctype_list: dtList,
+            };
+            frappe.set_route("query-report", "User Activity Detail", route_opts);
         });
     },
     formatter: function(value, row, column, data, default_formatter) {
