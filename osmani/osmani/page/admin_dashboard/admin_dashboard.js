@@ -1071,21 +1071,20 @@ class AdminDashboard {
 	}
 
 	format_currency_short(value) {
-		if (value === null || value === undefined) return '0';
-		const currency = frappe.defaults.get_default('currency') || 'USD';
-		const currency_symbol = frappe.boot.sysdefaults.currency_symbols?.[currency] || currency;
+		if (value === null || value === undefined) return 'Rs 0';
+		
+		// Remove any decimals for cleaner display
+		value = parseFloat(value);
 		
 		if (value >= 1000000000) {
-			return currency_symbol + (value / 1000000000).toFixed(2) + 'B';
+			return 'Rs ' + (value / 1000000000).toFixed(2) + ' B';
 		} else if (value >= 1000000) {
-			return currency_symbol + (value / 1000000).toFixed(2) + 'M';
+			return 'Rs ' + (value / 1000000).toFixed(2) + ' M';
 		} else if (value >= 1000) {
-			return currency_symbol + (value / 1000).toFixed(2) + 'K';
+			return 'Rs ' + (value / 1000).toFixed(2) + ' K';
 		}
-		return frappe.format(value, {
-			fieldtype: 'Currency',
-			currency: currency
-		});
+		// For values less than 1000, show with 2 decimals
+		return 'Rs ' + value.toFixed(2);
 	}
 
 	format_currency(value) {
