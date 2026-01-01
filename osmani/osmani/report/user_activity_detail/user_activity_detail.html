@@ -1,0 +1,123 @@
+<div class="print-format">
+
+    <style>
+        .print-format {
+            font-size: 11px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 6px;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .header {
+            margin-bottom: 10px;
+        }
+        .footer {
+            margin-top: 10px;
+            font-size: 10px;
+            text-align: right;
+        }
+    </style>
+
+    {%
+        function format_date(value) {
+            if (!value) return "";
+            var d = new Date(value);
+            var months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+            return (
+                ("0" + d.getDate()).slice(-2) +
+                "-" + months[d.getMonth()] +
+                "-" + d.getFullYear()
+            );
+        }
+
+        function format_currency(value) {
+            if (!value) return "0";
+            return Number(value).toLocaleString();
+        }
+
+        var user_name = "";
+        if (data && data.length && data[0].user_name) {
+            user_name = data[0].user_name;
+        }
+
+        var printed_on = format_date(new Date());
+        var grand_total = 0;
+    %}
+
+    <!-- HEADER -->
+    <div class="header text-center">
+        <h3>User Activity Report</h3>
+
+        {% if (user_name) { %}
+            <div>
+                <strong>{{ user_name }}</strong>
+                {% if (filters && filters.from_date && filters.to_date) { %}
+                    &nbsp; | &nbsp;
+                    {{ format_date(filters.from_date) }}
+                    to
+                    {{ format_date(filters.to_date) }}
+                {% } %}
+            </div>
+        {% } %}
+    </div>
+
+    <!-- TABLE -->
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Posting Date</th>
+                <th>DocType</th>
+                <th>Document</th>
+                <th>Status</th>
+                <th class="text-right">Total Amount</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {%
+                for (var i = 0; i < data.length; i++) {
+                    var row = data[i];
+                    var amount = row.total_amount || 0;
+                    grand_total += amount;
+            %}
+                <tr>
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ format_date(row.posting_date) }}</td>
+                    <td>{{ row.doctype }}</td>
+                    <td>{{ row.name }}</td>
+                    <td>{{ row.status }}</td>
+                    <td class="text-right">{{ format_currency(amount) }}</td>
+                </tr>
+            {% } %}
+        </tbody>
+
+        <!-- SINGLE GRAND TOTAL (ONLY ONCE) -->
+        <tfoot>
+            <tr>
+                <th colspan="5" class="text-right">Grand Total</th>
+                <th class="text-right">{{ format_currency(grand_total) }}</th>
+            </tr>
+        </tfoot>
+    </table>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        Printed On: {{ printed_on }}
+    </div>
+
+</div>
