@@ -6,16 +6,19 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "reference_no",
+  "reference_date",
+  "type",
   "party_type",
-  "from_account",
+  "party",
   "amount",
   "remarks",
   "column_break_ctqo",
-  "reference_date",
-  "type",
-  "party",
-  "to_account"
+  "reference_no",
+  "from_account",
+  "to_account",
+  "gst",
+  "wht",
+  "cheque_amount"
  ],
  "fields": [
   {
@@ -100,12 +103,27 @@
   {
    "fieldname": "column_break_ctqo",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gst",
+   "fieldtype": "Currency",
+   "label": "GST"
+  },
+  {
+   "fieldname": "wht",
+   "fieldtype": "Currency",
+   "label": "WHT"
+  },
+  {
+   "fieldname": "cheque_amount",
+   "fieldtype": "Currency",
+   "label": "Cheque Amount"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-20 12:52:32.962875",
+ "modified": "2026-01-20 14:51:08.757129",
  "modified_by": "Administrator",
  "module": "Osmani",
  "name": "Transaction Log Detail",
