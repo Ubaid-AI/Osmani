@@ -516,14 +516,19 @@ class AdminDashboard {
 	}
 
 	async get_project_data(period) {
+		// For projects, show all projects but filter by creation date if period is specified
 		const filters = [];
-		if (period.from_date) {
-			filters.push(['expected_start_date', '>=', period.from_date]);
+		if (period.from_date && period.to_date) {
+			// Show projects created in the period
+			filters.push(['creation', '>=', period.from_date]);
+			filters.push(['creation', '<=', period.to_date]);
+		} else if (period.from_date) {
+			filters.push(['creation', '>=', period.from_date]);
 		}
 
 		const projects = await frappe.db.get_list('Project', {
-			filters: filters,
-			fields: ['name', 'status', 'project_name'],
+			filters: filters.length > 0 ? filters : [],
+			fields: ['name', 'status', 'project_name', 'creation'],
 			limit: 1000
 		});
 
@@ -543,13 +548,8 @@ class AdminDashboard {
 	}
 
 	async get_customer_data(period) {
-		const filters = [];
-		if (period.from_date) {
-			filters.push(['creation', '>=', period.from_date]);
-		}
-
+		// Get all customers (not filtered by date for count)
 		const customers = await frappe.db.get_list('Customer', {
-			filters: filters,
 			fields: ['name', 'customer_name', 'disabled'],
 			limit: 1000
 		});
@@ -558,6 +558,7 @@ class AdminDashboard {
 		const disabled = customers.filter(c => c.disabled).length;
 		const count = customers.length;
 
+		// Outstanding amount should be filtered by invoice posting date
 		const outstanding_filters = [
 			['docstatus', '=', 1],
 			['outstanding_amount', '>', 0]
@@ -586,13 +587,8 @@ class AdminDashboard {
 	}
 
 	async get_supplier_data(period) {
-		const filters = [];
-		if (period.from_date) {
-			filters.push(['creation', '>=', period.from_date]);
-		}
-
+		// Get all suppliers (not filtered by date for count - suppliers are master data)
 		const suppliers = await frappe.db.get_list('Supplier', {
-			filters: filters,
 			fields: ['name', 'supplier_name', 'disabled'],
 			limit: 1000
 		});
@@ -609,15 +605,12 @@ class AdminDashboard {
 	}
 
 	async get_system_data(period) {
-		const filters = [];
-		if (period.from_date) {
-			filters.push(['creation', '>=', period.from_date]);
-		}
-
+		// System data should show total counts regardless of date period
+		// These are master data that don't change based on date filters
 		const [users, companies, employees] = await Promise.all([
-			frappe.db.get_list('User', { filters: filters, limit: 1000 }),
+			frappe.db.get_list('User', { limit: 1000 }),
 			frappe.db.get_list('Company', { limit: 100 }),
-			frappe.db.get_list('Employee', { filters: filters, limit: 1000 })
+			frappe.db.get_list('Employee', { limit: 1000 })
 		]);
 
 		return {
