@@ -7,12 +7,15 @@
  "engine": "InnoDB",
  "field_order": [
   "reference_no",
+  "party_type",
+  "from_account",
+  "amount",
+  "remarks",
+  "column_break_ctqo",
   "reference_date",
   "type",
-  "party_type",
   "party",
-  "amount",
-  "remarks"
+  "to_account"
  ],
  "fields": [
   {
@@ -74,12 +77,35 @@
    "in_list_view": 1,
    "in_preview": 1,
    "label": "Remarks"
+  },
+  {
+   "fieldname": "from_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "From Account",
+   "options": "Account"
+  },
+  {
+   "depends_on": "eval:in_list([\"Internal Transfer\"], doc.type)",
+   "fieldname": "to_account",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_preview": 1,
+   "in_standard_filter": 1,
+   "label": "To Account",
+   "options": "Account"
+  },
+  {
+   "fieldname": "column_break_ctqo",
+   "fieldtype": "Column Break"
   }
  ],
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2026-01-20 12:32:28.400569",
+ "modified": "2026-01-20 12:52:32.962875",
  "modified_by": "Administrator",
  "module": "Osmani",
  "name": "Transaction Log Detail",
