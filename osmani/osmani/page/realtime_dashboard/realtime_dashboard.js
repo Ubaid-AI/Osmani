@@ -310,15 +310,13 @@ class RealtimeDashboard {
 				// No filters for Customer and Supplier - just total count
 				filters = [];
 			} else if (doctype === 'Project') {
-				// Project has docstatus but no date filter
+				// Project has no date filter, shows total active projects
 				filters = [['status', '!=', 'Cancelled']];
 			} else {
 				// Other doctypes: only submitted documents with date filter
 				filters = [['docstatus', '=', 1]];
-				if (period.from_date) {
+				if (period.from_date && period.to_date) {
 					filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
-				}
-				if (period.to_date) {
 					filters.push(['creation', '<=', period.to_date + ' 23:59:59']);
 				}
 			}
@@ -600,7 +598,7 @@ class RealtimeDashboard {
 
 				all_entries = all_entries.concat(entries);
 			} catch (error) {
-				console.log(`Error fetching ${dt.doctype}:`, error);
+				// Silently handle errors for individual doctypes
 			}
 		}
 
@@ -611,8 +609,16 @@ class RealtimeDashboard {
 
 	async get_doctype_distribution(period) {
 		const counts = await this.get_doctype_counts(period);
-		const labels = Object.keys(counts);
-		const values = Object.values(counts);
+		// Filter out Project, Customer, Supplier from distribution chart
+		const filtered_counts = {};
+		Object.keys(counts).forEach(key => {
+			if (key !== 'Project' && key !== 'Customer' && key !== 'Supplier') {
+				filtered_counts[key] = counts[key];
+			}
+		});
+		
+		const labels = Object.keys(filtered_counts);
+		const values = Object.values(filtered_counts);
 
 		return {
 			labels: labels.map(l => l.replace(' ', '\n')),
@@ -1111,13 +1117,16 @@ class RealtimeDashboard {
 
 		// Payment Overview Chart (Bar)
 		const payment_chart_wrapper = this.wrapper.find('#payment-overview-chart')[0];
-		if (payment_chart_wrapper) {
+		if (payment_chart_wrapper && data.payment_overview) {
+			const received = data.payment_overview.received || 0;
+			const paid = data.payment_overview.paid || 0;
+			
 			this.charts.payment = new frappe.Chart(payment_chart_wrapper, {
 				data: {
 					labels: ['Received', 'Paid'],
 					datasets: [{
 						name: 'Amount',
-						values: [data.payment_overview.received, data.payment_overview.paid]
+						values: [received, paid]
 					}]
 				},
 				type: 'bar',
@@ -1132,16 +1141,36 @@ class RealtimeDashboard {
 		}
 
 		// Doctype Distribution Chart (Donut)
-		if (data.doctype_distribution && data.doctype_distribution.labels) {
-			const donut_wrapper = this.wrapper.find('#doctype-distribution-chart')[0];
-			if (donut_wrapper) {
-				this.charts.donut = new frappe.Chart(donut_wrapper, {
-					data: data.doctype_distribution,
-					type: 'donut',
-					height: 220,
-					colors: ['#03a4ed', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ff695f', '#a855f7', '#fb923c', '#ec4899']
-				});
-				setTimeout(() => this.apply_light_chart_colors(donut_wrapper), 100);
+		if (data.doctype_distribution && data.doctype_distribution.labels && data.doctype_distribution.labels.length > 0) {
+			// Filter out entries with zero or invalid values
+			const filtered_data = {
+				labels: [],
+				datasets: [{
+					name: 'Entries',
+					values: []
+				}]
+			};
+			
+			data.doctype_distribution.labels.forEach((label, idx) => {
+				const value = data.doctype_distribution.datasets[0].values[idx];
+				if (value > 0 && !isNaN(value)) {
+					filtered_data.labels.push(label);
+					filtered_data.datasets[0].values.push(value);
+				}
+			});
+			
+			// Only render if we have valid data
+			if (filtered_data.labels.length > 0) {
+				const donut_wrapper = this.wrapper.find('#doctype-distribution-chart')[0];
+				if (donut_wrapper) {
+					this.charts.donut = new frappe.Chart(donut_wrapper, {
+						data: filtered_data,
+						type: 'donut',
+						height: 220,
+						colors: ['#03a4ed', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ff695f', '#a855f7', '#fb923c', '#ec4899']
+					});
+					setTimeout(() => this.apply_light_chart_colors(donut_wrapper), 100);
+				}
 			}
 		}
 
