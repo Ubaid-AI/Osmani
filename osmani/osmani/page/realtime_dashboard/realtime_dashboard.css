@@ -702,17 +702,24 @@
 	gap: 12px;
 }
 
+.activity-wrapper {
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
 .user-activity-item,
 .recent-entry-item {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	padding: 12px;
+	padding: 14px;
 	background: rgba(255, 255, 255, 0.05);
 	border-radius: 12px;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	transition: all 0.3s ease;
 	cursor: pointer;
+	margin-bottom: 8px;
 }
 
 .user-activity-item:hover,

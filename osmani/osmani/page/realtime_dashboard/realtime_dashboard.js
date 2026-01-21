@@ -303,10 +303,18 @@ class RealtimeDashboard {
 
 		const counts = {};
 		for (const doctype of doctypes) {
-			const filters = [['docstatus', '=', 1]];
+			let filters = [];
 			
-			// Project should show total count without date filter
-			if (doctype !== 'Project' && doctype !== 'Customer' && doctype !== 'Supplier') {
+			// Customer and Supplier don't have docstatus, Project, Customer, and Supplier should show total count
+			if (doctype === 'Customer' || doctype === 'Supplier') {
+				// No filters for Customer and Supplier - just total count
+				filters = [];
+			} else if (doctype === 'Project') {
+				// Project has docstatus but no date filter
+				filters = [['status', '!=', 'Cancelled']];
+			} else {
+				// Other doctypes: only submitted documents with date filter
+				filters = [['docstatus', '=', 1]];
 				if (period.from_date) {
 					filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
 				}
@@ -562,14 +570,43 @@ class RealtimeDashboard {
 			filters.push(['creation', '<=', period.to_date + ' 23:59:59']);
 		}
 
-		const invoices = await frappe.db.get_list('Sales Invoice', {
-			filters: filters,
-			fields: ['name', 'customer', 'grand_total', 'creation'],
-			limit: 5,
-			order_by: 'creation desc'
-		});
+		// Fetch recent entries from multiple doctypes
+		const doctypes = [
+			{ doctype: 'Sales Invoice', fields: ['name', 'customer as party', 'grand_total', 'creation'], party_field: 'customer' },
+			{ doctype: 'Purchase Invoice', fields: ['name', 'supplier as party', 'grand_total', 'creation'], party_field: 'supplier' },
+			{ doctype: 'Sales Order', fields: ['name', 'customer as party', 'grand_total', 'creation'], party_field: 'customer' },
+			{ doctype: 'Purchase Order', fields: ['name', 'supplier as party', 'grand_total', 'creation'], party_field: 'supplier' },
+			{ doctype: 'Payment Entry', fields: ['name', 'party as party', 'paid_amount as grand_total', 'creation'], party_field: 'party' },
+			{ doctype: 'Journal Entry', fields: ['name', 'title as party', 'total_debit as grand_total', 'creation'], party_field: 'title' },
+			{ doctype: 'Employee Advance', fields: ['name', 'employee_name as party', 'advance_amount as grand_total', 'creation'], party_field: 'employee_name' },
+			{ doctype: 'Expense Claim', fields: ['name', 'employee_name as party', 'total_sanctioned_amount as grand_total', 'creation'], party_field: 'employee_name' }
+		];
 
-		return invoices;
+		let all_entries = [];
+
+		for (const dt of doctypes) {
+			try {
+				const entries = await frappe.db.get_list(dt.doctype, {
+					filters: filters,
+					fields: dt.fields,
+					limit: 3,
+					order_by: 'creation desc'
+				});
+
+				// Add doctype to each entry
+				entries.forEach(entry => {
+					entry.doctype = dt.doctype;
+				});
+
+				all_entries = all_entries.concat(entries);
+			} catch (error) {
+				console.log(`Error fetching ${dt.doctype}:`, error);
+			}
+		}
+
+		// Sort all entries by creation date and take top 10
+		all_entries.sort((a, b) => new Date(b.creation) - new Date(a.creation));
+		return all_entries.slice(0, 10);
 	}
 
 	async get_doctype_distribution(period) {
@@ -978,41 +1015,38 @@ class RealtimeDashboard {
 			let details = '';
 			let doctype = entry.doctype;
 			const docname = entry.name || '';
-			
-			// Debug log to see what we're getting
-			console.log('Entry data:', entry);
-			
-			// If doctype is missing, try to identify from fields
-			if (!doctype || doctype === 'Unknown') {
-				if (entry.customer && entry.grand_total) {
-					doctype = entry.paid_amount ? 'Payment Entry' : 'Sales Invoice';
-				} else if (entry.supplier && entry.grand_total) {
-					doctype = 'Purchase Invoice';
-				} else if (entry.paid_amount && entry.party) {
-					doctype = 'Payment Entry';
-				}
-			}
+			const party = entry.party || 'N/A';
+			const amount = entry.grand_total || 0;
 			
 			if (doctype === 'Sales Invoice') {
 				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>';
-				details = `${entry.customer || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+				details = `${party} • Rs ${this.format_number(amount)}`;
 			} else if (doctype === 'Purchase Invoice') {
 				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>';
-				details = `${entry.supplier || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+				details = `${party} • Rs ${this.format_number(amount)}`;
 			} else if (doctype === 'Sales Order') {
 				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>';
-				details = `${entry.customer || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+				details = `${party} • Rs ${this.format_number(amount)}`;
 			} else if (doctype === 'Purchase Order') {
 				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2z"/></svg>';
-				details = `${entry.supplier || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+				details = `${party} • Rs ${this.format_number(amount)}`;
 			} else if (doctype === 'Payment Entry') {
 				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="3"/></svg>';
-				details = `${entry.party || 'N/A'} • Rs ${this.format_number(entry.paid_amount || 0)}`;
+				details = `${party} • Rs ${this.format_number(amount)}`;
+			} else if (doctype === 'Journal Entry') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h12v16z"/><path d="M8 6h8v2H8zm0 4h8v2H8zm0 4h5v2H8z"/></svg>';
+				details = `${party} • Rs ${this.format_number(amount)}`;
+			} else if (doctype === 'Employee Advance') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>';
+				details = `${party} • Rs ${this.format_number(amount)}`;
+			} else if (doctype === 'Expense Claim') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/><path d="M8 16h8v2H8zm0-4h8v2H8z"/></svg>';
+				details = `${party} • Rs ${this.format_number(amount)}`;
 			} else {
 				// Default icon
 				doctype = doctype || 'Document';
 				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>';
-				details = 'Document';
+				details = `${party}`;
 			}
 			
 			return `
