@@ -22,36 +22,38 @@ class RealtimeDashboard {
 		this.wrapper.html(`
 			<div class="realtime-dashboard">
 				<div class="dashboard-header-glass">
-					<div class="header-content">
+					<div class="header-left">
 						<h1 class="dashboard-title">
 							<i class="fa fa-chart-line"></i>
 							Realtime Dashboard
 						</h1>
 						<p class="dashboard-subtitle">Live business analytics and insights</p>
 					</div>
-					<div class="dashboard-filters">
-						<div class="filter-group">
-							<button class="filter-btn active" data-period="realtime">
-								<i class="fa fa-bolt"></i> Realtime
-							</button>
-							<button class="filter-btn" data-period="today">
-								<i class="fa fa-calendar-day"></i> Today
-							</button>
-							<button class="filter-btn" data-period="week">
-								<i class="fa fa-calendar-week"></i> This Week
-							</button>
-							<button class="filter-btn" data-period="month">
-								<i class="fa fa-calendar-alt"></i> This Month
-							</button>
-							<button class="filter-btn" data-period="custom">
-								<i class="fa fa-calendar"></i> Custom
-							</button>
-						</div>
-						<div class="custom-date-range" style="display: none;">
-							<input type="date" class="date-input" id="from-date" />
-							<span>to</span>
-							<input type="date" class="date-input" id="to-date" />
-							<button class="btn-apply" id="apply-dates">Apply</button>
+					<div class="header-right">
+						<div class="dashboard-filters">
+							<div class="filter-group">
+								<button class="filter-btn active" data-period="realtime">
+									<i class="fa fa-bolt"></i> Realtime
+								</button>
+								<button class="filter-btn" data-period="today">
+									<i class="fa fa-calendar-day"></i> Today
+								</button>
+								<button class="filter-btn" data-period="week">
+									<i class="fa fa-calendar-week"></i> This Week
+								</button>
+								<button class="filter-btn" data-period="month">
+									<i class="fa fa-calendar-alt"></i> This Month
+								</button>
+								<button class="filter-btn" data-period="custom">
+									<i class="fa fa-calendar"></i> Custom
+								</button>
+							</div>
+							<div class="custom-date-range" style="display: none;">
+								<input type="date" class="date-input" id="from-date" />
+								<span>to</span>
+								<input type="date" class="date-input" id="to-date" />
+								<button class="btn-apply" id="apply-dates">Apply</button>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -101,9 +103,82 @@ class RealtimeDashboard {
 				}, 3);
 			}
 		});
+
+		// Print project profitability
+		$(this.wrapper).on('click', '#print-project-profitability', function() {
+			me.print_project_profitability();
+		});
+
+		// Navigate to user entries summary
+		$(this.wrapper).on('click', '.user-activity-item', function(e) {
+			e.preventDefault();
+			e.stopPropagation();
+			const userName = $(this).find('.user-name').text();
+			const userEmail = $(this).data('user-email');
+			
+			// Get current date filters
+			const period = me.get_date_filters();
+			
+			// Navigate using frappe.set_route with proper format
+			frappe.route_options = {
+				user_email: userEmail,
+				user_name: userName,
+				from_date: period.from_date,
+				to_date: period.to_date,
+				period: me.current_period,
+				custom_range: me.custom_date_range
+			};
+			frappe.set_route('user-entries-summary');
+		});
+
+		// Make summary cards clickable
+		$(this.wrapper).on('click', '.glass-card.clickable-card', function() {
+			const doctype = $(this).data('doctype');
+			if (doctype) {
+				// Get current date filters
+				const period = me.get_date_filters();
+				const filters = { docstatus: 1 };
+				
+				// Add date filters for transactional doctypes (not for Project, Customer, Supplier)
+				if (doctype !== 'Project' && doctype !== 'Customer' && doctype !== 'Supplier') {
+					if (period.from_date) {
+						filters.creation = ['>=', period.from_date];
+					}
+					if (period.to_date) {
+						filters.modified = ['<=', period.to_date + ' 23:59:59'];
+					}
+				}
+				
+				frappe.route_options = filters;
+				frappe.set_route('List', doctype);
+			}
+		});
+
+		// Make recent entries clickable
+		$(this.wrapper).on('click', '.recent-entry-item', function() {
+			const doctype = $(this).data('doctype');
+			const docname = $(this).data('docname');
+			if (doctype && docname) {
+				frappe.set_route('Form', doctype, docname);
+			}
+		});
 	}
 
 	init() {
+		// Clear existing charts on init to prevent size issues when coming back from other pages
+		if (this.charts) {
+			Object.keys(this.charts).forEach(key => {
+				if (this.charts[key] && this.charts[key].destroy) {
+					try {
+						this.charts[key].destroy();
+					} catch(e) {
+						// Ignore errors
+					}
+				}
+			});
+		}
+		this.charts = {};
+		
 		this.refresh();
 		// Auto-refresh every 30 seconds for realtime mode
 		this.start_auto_refresh();
@@ -222,17 +297,22 @@ class RealtimeDashboard {
 		const doctypes = [
 			'Project', 'Sales Order', 'Purchase Order', 
 			'Sales Invoice', 'Purchase Invoice', 'Payment Entry',
-			'Journal Entry', 'Employee Advance', 'Expense Claim'
+			'Journal Entry', 'Employee Advance', 'Expense Claim',
+			'Customer', 'Supplier'
 		];
 
 		const counts = {};
 		for (const doctype of doctypes) {
-			const filters = [];
-			if (period.from_date) {
-				filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
-			}
-			if (period.to_date) {
-				filters.push(['creation', '<=', period.to_date + ' 23:59:59']);
+			const filters = [['docstatus', '=', 1]];
+			
+			// Project should show total count without date filter
+			if (doctype !== 'Project' && doctype !== 'Customer' && doctype !== 'Supplier') {
+				if (period.from_date) {
+					filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
+				}
+				if (period.to_date) {
+					filters.push(['creation', '<=', period.to_date + ' 23:59:59']);
+				}
 			}
 
 			const count = await frappe.db.count(doctype, { filters });
@@ -243,7 +323,7 @@ class RealtimeDashboard {
 	}
 
 	async get_user_activity(period) {
-		const filters = [];
+		const filters = [['docstatus', '=', 1]];
 		if (period.from_date) {
 			filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
 		}
@@ -263,10 +343,16 @@ class RealtimeDashboard {
 			});
 
 			entries.forEach(entry => {
-				if (!user_data[entry.owner]) {
-					user_data[entry.owner] = 0;
+				// Map Administrator to ubaid.khanzada@oclits.com
+				let owner = entry.owner;
+				if (owner === 'Administrator') {
+					owner = 'ubaid.khanzada@oclits.com';
 				}
-				user_data[entry.owner]++;
+				
+				if (!user_data[owner]) {
+					user_data[owner] = 0;
+				}
+				user_data[owner]++;
 			});
 		}
 
@@ -457,6 +543,7 @@ class RealtimeDashboard {
 		const user_activity = await this.get_user_activity(period);
 		const sorted = Object.entries(user_activity.counts)
 			.map(([email, count]) => ({
+				email: email,
 				name: user_activity.names[email],
 				count: count
 			}))
@@ -467,7 +554,7 @@ class RealtimeDashboard {
 	}
 
 	async get_recent_entries(period) {
-		const filters = [];
+		const filters = [['docstatus', '=', 1]];
 		if (period.from_date) {
 			filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
 		}
@@ -500,7 +587,7 @@ class RealtimeDashboard {
 	}
 
 	async get_user_doctype_breakdown(period) {
-		const filters = [];
+		const filters = [['docstatus', '=', 1]];
 		if (period.from_date) {
 			filters.push(['creation', '>=', period.from_date + ' 00:00:00']);
 		}
@@ -510,7 +597,8 @@ class RealtimeDashboard {
 
 		const doctypes = [
 			'Sales Invoice', 'Purchase Invoice', 'Sales Order', 
-			'Purchase Order', 'Payment Entry'
+			'Purchase Order', 'Payment Entry', 'Journal Entry',
+			'Employee Advance', 'Expense Claim'
 		];
 
 		const user_breakdown = {};
@@ -523,13 +611,19 @@ class RealtimeDashboard {
 			});
 
 			entries.forEach(entry => {
-				if (!user_breakdown[entry.owner]) {
-					user_breakdown[entry.owner] = {};
+				// Map Administrator to ubaid.khanzada@oclits.com
+				let owner = entry.owner;
+				if (owner === 'Administrator') {
+					owner = 'ubaid.khanzada@oclits.com';
 				}
-				if (!user_breakdown[entry.owner][doctype]) {
-					user_breakdown[entry.owner][doctype] = 0;
+				
+				if (!user_breakdown[owner]) {
+					user_breakdown[owner] = {};
 				}
-				user_breakdown[entry.owner][doctype]++;
+				if (!user_breakdown[owner][doctype]) {
+					user_breakdown[owner][doctype] = 0;
+				}
+				user_breakdown[owner][doctype]++;
 			});
 		}
 
@@ -547,84 +641,156 @@ class RealtimeDashboard {
 
 	render_dashboard(data) {
 		const content = this.wrapper.find('#dashboard-content');
+		
+		// Clear any existing charts BEFORE clearing content to prevent size issues
+		if (this.charts) {
+			Object.keys(this.charts).forEach(key => {
+				if (this.charts[key] && this.charts[key].destroy) {
+					try {
+						this.charts[key].destroy();
+					} catch(e) {
+						// Ignore errors
+					}
+				}
+			});
+		}
+		this.charts = {};
+		
+		// Now clear content
 		content.html('');
 
-		// Summary cards
-		content.append(this.create_summary_cards(data));
+		// Summary cards section with spacing
+		const cardsSection = $('<div class="dashboard-section cards-section"></div>');
+		cardsSection.append(this.create_summary_cards(data));
+		content.append(cardsSection);
 
-		// Charts section
-		content.append(this.create_charts_section(data));
+		// Charts section with spacing
+		const chartsSection = $('<div class="dashboard-section charts-section"></div>');
+		chartsSection.append(this.create_charts_section(data));
+		content.append(chartsSection);
 
-		// Project analytics
-		content.append(this.create_project_analytics(data));
+		// Reports section (Project Profitability and Top Active Users side by side)
+		const reportsSection = $('<div class="dashboard-section reports-section"></div>');
+		const reportsGrid = $('<div class="glass-activity-grid"></div>');
+		reportsGrid.append(this.create_project_analytics(data));
+		reportsGrid.append(this.create_top_users_section(data));
+		reportsSection.append(reportsGrid);
+		content.append(reportsSection);
 
-		// User activity and recent entries
-		content.append(this.create_activity_section(data));
+		// Recent Entries section
+		const recentEntriesSection = $('<div class="dashboard-section recent-entries-section"></div>');
+		recentEntriesSection.append(this.create_recent_entries_section(data));
+		content.append(recentEntriesSection);
 
-		// Render charts
+		// Render charts with longer delay and force redraw
 		setTimeout(() => {
 			this.render_charts(data);
-		}, 100);
+			// Force browser repaint
+			this.wrapper.find('#dashboard-content')[0].offsetHeight;
+		}, 200);
 	}
 
 	create_summary_cards(data) {
 		const cards_html = `
 			<div class="glass-cards-grid">
-				<div class="glass-card primary-gradient">
-					<div class="card-icon"><i class="fa fa-file-invoice"></i></div>
-					<div class="card-content">
-						<div class="card-label">Sales Invoices</div>
-						<div class="card-value">${data.doctype_counts['Sales Invoice'] || 0}</div>
+				<div class="glass-card primary-gradient clickable-card" data-doctype="Sales Invoice" style="cursor: pointer;" title="Click to view Sales Invoice list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>
+						</div>
+						<div class="card-label">Sales Invoice</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Sales Invoice'] || 0}</div>
 				</div>
-				<div class="glass-card success-gradient">
-					<div class="card-icon"><i class="fa fa-shopping-cart"></i></div>
-					<div class="card-content">
-						<div class="card-label">Sales Orders</div>
-						<div class="card-value">${data.doctype_counts['Sales Order'] || 0}</div>
+				<div class="glass-card success-gradient clickable-card" data-doctype="Sales Order" style="cursor: pointer;" title="Click to view Sales Order list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-9.8-3.2l.9-1.6C9 12.6 10.4 12 12 12c1.6 0 3 .6 3.9 1.6l.9 1.6H7.2zm9.1-5.5l-1.7-1.7c-.4-.4-1-.4-1.4 0l-1.4 1.4-1.4-1.4c-.4-.4-1-.4-1.4 0l-1.7 1.7c-.4.4-.4 1 0 1.4l1.4 1.4-1.4 1.4c-.4.4-.4 1 0 1.4l1.7 1.7c.4.4 1 .4 1.4 0l1.4-1.4 1.4 1.4c.4.4 1 .4 1.4 0l1.7-1.7c.4-.4.4-1 0-1.4l-1.4-1.4 1.4-1.4c.4-.4.4-1 0-1.4z"/></svg>
+						</div>
+						<div class="card-label">Sales Order</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Sales Order'] || 0}</div>
 				</div>
-				<div class="glass-card warning-gradient">
-					<div class="card-icon"><i class="fa fa-receipt"></i></div>
-					<div class="card-content">
-						<div class="card-label">Purchase Invoices</div>
-						<div class="card-value">${data.doctype_counts['Purchase Invoice'] || 0}</div>
+				<div class="glass-card warning-gradient clickable-card" data-doctype="Purchase Invoice" style="cursor: pointer;" title="Click to view Purchase Invoice list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
+						</div>
+						<div class="card-label">Purchase Invoice</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Purchase Invoice'] || 0}</div>
 				</div>
-				<div class="glass-card info-gradient">
-					<div class="card-icon"><i class="fa fa-credit-card"></i></div>
-					<div class="card-content">
-						<div class="card-label">Payments</div>
-						<div class="card-value">${data.doctype_counts['Payment Entry'] || 0}</div>
+				<div class="glass-card info-gradient clickable-card" data-doctype="Payment Entry" style="cursor: pointer;" title="Click to view Payment Entry list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/><circle cx="12" cy="15" r="2"/></svg>
+						</div>
+						<div class="card-label">Payment Entry</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Payment Entry'] || 0}</div>
 				</div>
-				<div class="glass-card purple-gradient">
-					<div class="card-icon"><i class="fa fa-project-diagram"></i></div>
-					<div class="card-content">
-						<div class="card-label">Projects</div>
-						<div class="card-value">${data.doctype_counts['Project'] || 0}</div>
+				<div class="glass-card purple-gradient clickable-card" data-doctype="Project" style="cursor: pointer;" title="Click to view Project list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/><path d="M7 12h2v5H7zm4-3h2v8h-2zm4-3h2v11h-2z"/></svg>
+						</div>
+						<div class="card-label">Project</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Project'] || 0}</div>
 				</div>
-				<div class="glass-card cyan-gradient">
-					<div class="card-icon"><i class="fa fa-book"></i></div>
-					<div class="card-content">
-						<div class="card-label">Journal Entries</div>
-						<div class="card-value">${data.doctype_counts['Journal Entry'] || 0}</div>
+				<div class="glass-card cyan-gradient clickable-card" data-doctype="Journal Entry" style="cursor: pointer;" title="Click to view Journal Entry list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V4h12v16z"/><path d="M8 6h8v2H8zm0 4h8v2H8zm0 4h5v2H8z"/></svg>
+						</div>
+						<div class="card-label">Journal Entry</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Journal Entry'] || 0}</div>
 				</div>
-				<div class="glass-card pink-gradient">
-					<div class="card-icon"><i class="fa fa-money-bill-wave"></i></div>
-					<div class="card-content">
-						<div class="card-label">Employee Advances</div>
-						<div class="card-value">${data.doctype_counts['Employee Advance'] || 0}</div>
+				<div class="glass-card pink-gradient clickable-card" data-doctype="Employee Advance" style="cursor: pointer;" title="Click to view Employee Advance list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+						</div>
+						<div class="card-label">Employee Advance</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Employee Advance'] || 0}</div>
 				</div>
-				<div class="glass-card orange-gradient">
-					<div class="card-icon"><i class="fa fa-file-alt"></i></div>
-					<div class="card-content">
-						<div class="card-label">Expense Claims</div>
-						<div class="card-value">${data.doctype_counts['Expense Claim'] || 0}</div>
+				<div class="glass-card orange-gradient clickable-card" data-doctype="Expense Claim" style="cursor: pointer;" title="Click to view Expense Claim list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/><path d="M8 16h8v2H8zm0-4h8v2H8z"/></svg>
+						</div>
+						<div class="card-label">Expense Claim</div>
 					</div>
+					<div class="card-value">${data.doctype_counts['Expense Claim'] || 0}</div>
+				</div>
+				<div class="glass-card teal-gradient clickable-card" data-doctype="Purchase Order" style="cursor: pointer;" title="Click to view Purchase Order list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm-7 14c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"/></svg>
+						</div>
+						<div class="card-label">Purchase Order</div>
+					</div>
+					<div class="card-value">${data.doctype_counts['Purchase Order'] || 0}</div>
+				</div>
+				<div class="glass-card blue-gradient clickable-card" data-doctype="Customer" style="cursor: pointer;" title="Click to view Customer list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+						</div>
+						<div class="card-label">Customer</div>
+					</div>
+					<div class="card-value">${data.doctype_counts['Customer'] || 0}</div>
+				</div>
+				<div class="glass-card indigo-gradient clickable-card" data-doctype="Supplier" style="cursor: pointer;" title="Click to view Supplier list">
+					<div class="card-header-row">
+						<div class="card-icon">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M20 6h-3V4c0-1.11-.89-2-2-2H9c-1.11 0-2 .89-2 2v2H4c-1.11 0-2 .89-2 2v11c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zM9 4h6v2H9V4zm11 15H4V8h3v2h2V8h6v2h2V8h3v11z"/></svg>
+						</div>
+						<div class="card-label">Supplier</div>
+					</div>
+					<div class="card-value">${data.doctype_counts['Supplier'] || 0}</div>
 				</div>
 			</div>
 		`;
@@ -637,37 +803,55 @@ class RealtimeDashboard {
 			<div class="charts-grid">
 				<div class="glass-chart-container">
 					<div class="chart-header">
-						<h3><i class="fa fa-chart-line"></i> Sales Trend</h3>
+						<h3>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 8px; vertical-align: middle;"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 6-6" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+							Sales Entry Trend
+						</h3>
 					</div>
 					<div class="chart-wrapper" id="sales-trend-chart"></div>
 				</div>
 				<div class="glass-chart-container">
 					<div class="chart-header">
-						<h3><i class="fa fa-money-bill-wave"></i> Payment Overview</h3>
+						<h3>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 8px; vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+							Payment Entry Overview
+						</h3>
 					</div>
 					<div class="chart-wrapper" id="payment-overview-chart"></div>
 				</div>
 				<div class="glass-chart-container">
 					<div class="chart-header">
-						<h3><i class="fa fa-chart-pie"></i> Doctype Distribution</h3>
+						<h3>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 8px; vertical-align: middle;"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12 6v6l4 2"/></svg>
+							Entry Distribution
+						</h3>
 					</div>
 					<div class="chart-wrapper" id="doctype-distribution-chart"></div>
 				</div>
 				<div class="glass-chart-container">
 					<div class="chart-header">
-						<h3><i class="fa fa-users-cog"></i> User Doctype Breakdown</h3>
+						<h3>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 8px; vertical-align: middle;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+							User Entry Breakdown
+						</h3>
 					</div>
 					<div class="chart-wrapper" id="user-doctype-chart"></div>
 				</div>
 				<div class="glass-chart-container">
 					<div class="chart-header">
-						<h3><i class="fa fa-chart-area"></i> Project Recovery</h3>
+						<h3>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 8px; vertical-align: middle;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/><path d="M7 10h10v2H7zm0 4h7v2H7z"/></svg>
+							Project Recovery
+						</h3>
 					</div>
 					<div class="chart-wrapper" id="project-recovery-chart"></div>
 				</div>
 				<div class="glass-chart-container">
 					<div class="chart-header">
-						<h3><i class="fa fa-chart-bar"></i> Project Profitability</h3>
+						<h3>
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="margin-right: 8px; vertical-align: middle;"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm0 16H5V5h14v14z"/><path d="M7 12h2v5H7zm4-3h2v8h-2zm4-3h2v11h-2z"/></svg>
+							Project Profitability
+						</h3>
 					</div>
 					<div class="chart-wrapper" id="project-profit-chart"></div>
 				</div>
@@ -677,9 +861,20 @@ class RealtimeDashboard {
 
 	create_project_analytics(data) {
 		const projects = Object.keys(data.project_profitability);
-		const project_rows = projects.slice(0, 10).map(project => {
+		
+		// Calculate totals
+		let total_revenue = 0;
+		let total_cost = 0;
+		let total_profit = 0;
+		
+		const project_rows = projects.map(project => {
 			const profit_data = data.project_profitability[project];
 			const profit_class = profit_data.profit >= 0 ? 'positive' : 'negative';
+			
+			// Add to totals
+			total_revenue += profit_data.revenue;
+			total_cost += profit_data.cost;
+			total_profit += profit_data.profit;
 			
 			return `
 				<tr>
@@ -691,13 +886,40 @@ class RealtimeDashboard {
 				</tr>
 			`;
 		}).join('');
+		
+		// Calculate total margin
+		const total_margin = total_revenue > 0 ? ((total_profit / total_revenue) * 100).toFixed(2) : 0;
+		const total_class = total_profit >= 0 ? 'positive' : 'negative';
+		
+		const total_row = `
+			<tr class="total-row">
+				<td><strong>Total</strong></td>
+				<td><strong>Rs ${this.format_number(total_revenue)}</strong></td>
+				<td><strong>Rs ${this.format_number(total_cost)}</strong></td>
+				<td class="${total_class}"><strong>Rs ${this.format_number(total_profit)}</strong></td>
+				<td class="${total_class}"><strong>${total_margin}%</strong></td>
+			</tr>
+		`;
+		
+		// Determine if table should be scrollable
+		const scroll_class = projects.length > 8 ? 'scrollable' : '';
 
 		return $(`
-			<div class="glass-table-container">
+			<div class="glass-table-container" id="project-profitability-section">
 				<div class="table-header">
-					<h3><i class="fa fa-chart-pie"></i> Project Profitability</h3>
+					<h3>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="margin-right: 8px; vertical-align: middle;"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2zm0 16H5V5h14v14z"/><path d="M7 12h2v5H7zm4-3h2v8h-2zm4-3h2v11h-2z"/></svg>
+						Project Profitability
+					</h3>
+					<div class="table-actions">
+						<button class="action-btn-small" id="print-project-profitability" title="Print Report">
+							<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+								<path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/>
+							</svg>
+						</button>
+					</div>
 				</div>
-				<div class="table-wrapper">
+				<div class="table-wrapper ${scroll_class}">
 					<table class="glass-table">
 						<thead>
 							<tr>
@@ -711,57 +933,129 @@ class RealtimeDashboard {
 						<tbody>
 							${project_rows || '<tr><td colspan="5">No data available</td></tr>'}
 						</tbody>
+						<tfoot>
+							${total_row}
+						</tfoot>
 					</table>
 				</div>
 			</div>
 		`);
 	}
 
-	create_activity_section(data) {
+	create_top_users_section(data) {
 		const top_users = data.top_users.slice(0, 5).map((user, idx) => `
-			<div class="user-activity-item">
+			<div class="user-activity-item" data-user-email="${user.email}" style="cursor: pointer;" title="Click to view detailed entries">
 				<div class="user-rank">${idx + 1}</div>
 				<div class="user-info">
 					<div class="user-name">${user.name}</div>
-					<div class="user-count">${user.count} entries</div>
+					<div class="user-count">${user.count} Entries</div>
 				</div>
-			</div>
-		`).join('');
-
-		const recent_entries = data.recent_entries.map(entry => `
-			<div class="recent-entry-item">
-				<div class="entry-icon"><i class="fa fa-file-invoice"></i></div>
-				<div class="entry-info">
-					<div class="entry-name">${entry.name}</div>
-					<div class="entry-details">${entry.customer} • Rs ${this.format_number(entry.grand_total)}</div>
-				</div>
-				<div class="entry-time">${this.time_ago(entry.creation)}</div>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" style="opacity: 0.5;">
+					<path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/>
+				</svg>
 			</div>
 		`).join('');
 
 		return $(`
-			<div class="activity-grid">
-				<div class="glass-activity-container">
-					<div class="activity-header">
-						<h3><i class="fa fa-users"></i> Top Active Users</h3>
-					</div>
-					<div class="activity-wrapper">
-						${top_users || '<p class="no-data">No activity data</p>'}
-					</div>
+			<div class="glass-activity-container">
+				<div class="activity-header">
+					<h3>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="margin-right: 8px; vertical-align: middle;"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+						Top Active Users
+					</h3>
 				</div>
-				<div class="glass-activity-container">
-					<div class="activity-header">
-						<h3><i class="fa fa-clock"></i> Recent Entries</h3>
+				<div class="activity-wrapper">
+					${top_users || '<p class="no-data">No activity data</p>'}
+				</div>
+			</div>
+		`);
+	}
+
+	create_recent_entries_section(data) {
+		const recent_entries = data.recent_entries.map(entry => {
+			// Get icon and doctype - ensure doctype is properly set
+			let icon_svg = '';
+			let details = '';
+			let doctype = entry.doctype;
+			const docname = entry.name || '';
+			
+			// Debug log to see what we're getting
+			console.log('Entry data:', entry);
+			
+			// If doctype is missing, try to identify from fields
+			if (!doctype || doctype === 'Unknown') {
+				if (entry.customer && entry.grand_total) {
+					doctype = entry.paid_amount ? 'Payment Entry' : 'Sales Invoice';
+				} else if (entry.supplier && entry.grand_total) {
+					doctype = 'Purchase Invoice';
+				} else if (entry.paid_amount && entry.party) {
+					doctype = 'Payment Entry';
+				}
+			}
+			
+			if (doctype === 'Sales Invoice') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>';
+				details = `${entry.customer || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+			} else if (doctype === 'Purchase Invoice') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>';
+				details = `${entry.supplier || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+			} else if (doctype === 'Sales Order') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M7 18c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm10 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>';
+				details = `${entry.customer || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+			} else if (doctype === 'Purchase Order') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.11 0 2-.9 2-2V5c0-1.1-.89-2-2-2z"/></svg>';
+				details = `${entry.supplier || 'N/A'} • Rs ${this.format_number(entry.grand_total || 0)}`;
+			} else if (doctype === 'Payment Entry') {
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="3"/></svg>';
+				details = `${entry.party || 'N/A'} • Rs ${this.format_number(entry.paid_amount || 0)}`;
+			} else {
+				// Default icon
+				doctype = doctype || 'Document';
+				icon_svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm4 18H6V4h7v5h5v11z"/></svg>';
+				details = 'Document';
+			}
+			
+			return `
+				<div class="recent-entry-item" data-doctype="${doctype}" data-docname="${docname}" style="cursor: pointer;" title="Click to open ${doctype}">
+					<div class="entry-icon">${icon_svg}</div>
+					<div class="entry-info">
+						<div class="entry-doctype">${doctype}</div>
+						<div class="entry-name">${docname}</div>
+						<div class="entry-details">${details}</div>
 					</div>
-					<div class="activity-wrapper">
-						${recent_entries || '<p class="no-data">No recent entries</p>'}
-					</div>
+					<div class="entry-time">${this.time_ago(entry.creation)}</div>
+				</div>
+			`;
+		}).join('');
+
+		return $(`
+			<div class="glass-activity-container">
+				<div class="activity-header">
+					<h3>
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" style="margin-right: 8px; vertical-align: middle;"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><path d="M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+						Recent Entries
+					</h3>
+				</div>
+				<div class="activity-wrapper">
+					${recent_entries || '<p class="no-data">No recent entries</p>'}
 				</div>
 			</div>
 		`);
 	}
 
 	render_charts(data) {
+		// Common chart options for light text colors
+		const chart_options = {
+			axisOptions: {
+				xAxisMode: 'tick',
+				xIsSeries: false
+			},
+			tooltipOptions: {
+				formatTooltipX: d => (d + '').toUpperCase(),
+				formatTooltipY: d => d + ' pts'
+			}
+		};
+
 		// Sales Trend Chart (Line)
 		if (data.sales_trend && data.sales_trend.labels && data.sales_trend.labels.length > 0) {
 			const chart_wrapper = this.wrapper.find('#sales-trend-chart')[0];
@@ -770,8 +1064,14 @@ class RealtimeDashboard {
 					data: data.sales_trend,
 					type: 'line',
 					height: 220,
-					colors: ['#03a4ed']
+					colors: ['#03a4ed'],
+					axisOptions: {
+						xAxisMode: 'tick',
+						xIsSeries: false
+					}
 				});
+				// Apply light colors to chart elements
+				setTimeout(() => this.apply_light_chart_colors(chart_wrapper), 100);
 			}
 		}
 
@@ -788,8 +1088,13 @@ class RealtimeDashboard {
 				},
 				type: 'bar',
 				height: 220,
-				colors: ['#10b981', '#ff695f']
+				colors: ['#10b981', '#ff695f'],
+				axisOptions: {
+					xAxisMode: 'tick',
+					xIsSeries: false
+				}
 			});
+			setTimeout(() => this.apply_light_chart_colors(payment_chart_wrapper), 100);
 		}
 
 		// Doctype Distribution Chart (Donut)
@@ -802,6 +1107,7 @@ class RealtimeDashboard {
 					height: 220,
 					colors: ['#03a4ed', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ff695f', '#a855f7', '#fb923c', '#ec4899']
 				});
+				setTimeout(() => this.apply_light_chart_colors(donut_wrapper), 100);
 			}
 		}
 
@@ -833,11 +1139,16 @@ class RealtimeDashboard {
 						},
 						type: 'bar',
 						height: 220,
-						colors: ['#03a4ed', '#10b981', '#f59e0b', '#8b5cf6', '#ff695f'],
+						colors: ['#03a4ed', '#10b981', '#f59e0b', '#8b5cf6', '#ff695f', '#06b6d4', '#a855f7', '#fb923c'],
 						barOptions: {
 							stacked: 1
+						},
+						axisOptions: {
+							xAxisMode: 'tick',
+							xIsSeries: false
 						}
 					});
+					setTimeout(() => this.apply_light_chart_colors(user_chart_wrapper), 100);
 				}
 			}
 		}
@@ -864,6 +1175,7 @@ class RealtimeDashboard {
 					height: 220,
 					colors: ['#10b981', '#03a4ed', '#f59e0b', '#8b5cf6', '#06b6d4']
 				});
+				setTimeout(() => this.apply_light_chart_colors(recovery_wrapper), 100);
 			}
 		}
 
@@ -884,10 +1196,46 @@ class RealtimeDashboard {
 					},
 					type: 'bar',
 					height: 220,
-					colors: ['#10b981']
+					colors: ['#10b981'],
+					axisOptions: {
+						xAxisMode: 'tick',
+						xIsSeries: false
+					}
 				});
+				setTimeout(() => this.apply_light_chart_colors(profit_wrapper), 100);
 			}
 		}
+	}
+
+	apply_light_chart_colors(chart_wrapper) {
+		// Apply light colors to all text elements in the chart
+		setTimeout(() => {
+			const svg = chart_wrapper.querySelector('svg');
+			if (svg) {
+				// Apply light color to all text elements
+				const texts = svg.querySelectorAll('text');
+				texts.forEach(text => {
+					text.style.fill = '#cbd5e1';
+					text.style.fontWeight = '500';
+				});
+				
+				// Apply light color to axis lines
+				const lines = svg.querySelectorAll('line');
+				lines.forEach(line => {
+					if (line.classList.contains('x-line') || line.classList.contains('y-line')) {
+						line.style.stroke = 'rgba(255, 255, 255, 0.1)';
+					}
+				});
+				
+				// Apply light color to axis paths
+				const paths = svg.querySelectorAll('path.path-line');
+				paths.forEach(path => {
+					if (!path.classList.contains('dataset-path')) {
+						path.style.stroke = 'rgba(255, 255, 255, 0.1)';
+					}
+				});
+			}
+		}, 200);
 	}
 
 	format_number(value) {
@@ -910,5 +1258,133 @@ class RealtimeDashboard {
 		if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
 		if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
 		return Math.floor(diff / 86400) + 'd ago';
+	}
+
+	print_project_profitability() {
+		const section = document.querySelector('#project-profitability-section');
+		if (!section) return;
+
+		// Format date as 21-JAN-2026
+		const now = new Date();
+		const day = String(now.getDate()).padStart(2, '0');
+		const month = now.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+		const year = now.getFullYear();
+		const formattedDate = `${day}-${month}-${year}`;
+
+		// Get table content without the total row
+		const tableWrapper = section.querySelector('.table-wrapper');
+		const table = tableWrapper.querySelector('table').cloneNode(true);
+		
+		// Remove total row from tbody (it will be added in tfoot)
+		const tbody = table.querySelector('tbody');
+		const tfoot = table.querySelector('tfoot');
+		
+		const printWindow = window.open('', '_blank');
+		printWindow.document.write(`
+			<html>
+				<head>
+					<title>Project Profitability Report</title>
+					<style>
+						* { margin: 0; padding: 0; box-sizing: border-box; }
+						body { 
+							font-family: Arial, sans-serif; 
+							padding: 20px; 
+							color: #000;
+						}
+						.report-header {
+							margin-bottom: 30px;
+							position: relative;
+						}
+						h1 { 
+							text-align: center;
+							color: #000;
+							font-size: 24px;
+							font-weight: bold;
+							margin-bottom: 10px;
+						}
+						.print-date {
+							text-align: right;
+							font-size: 11px;
+							color: #000;
+							margin-top: 5px;
+						}
+						table { 
+							width: 100%; 
+							border-collapse: collapse; 
+							margin-top: 20px;
+						}
+						th, td { 
+							border: 1px solid #000; 
+							padding: 10px;
+							color: #000;
+						}
+						th { 
+							background-color: #f0f0f0;
+							color: #000;
+							font-weight: bold;
+							text-align: center;
+						}
+						td {
+							text-align: left;
+						}
+						td:nth-child(2), td:nth-child(3), td:nth-child(4), td:nth-child(5) {
+							text-align: right;
+						}
+						.positive { 
+							color: #000;
+							font-weight: normal;
+						}
+						.negative { 
+							color: #000;
+							font-weight: normal;
+						}
+						tfoot {
+							page-break-inside: avoid;
+						}
+						tfoot td { 
+							background-color: #e0e0e0;
+							font-weight: bold;
+							border-top: 2px solid #000;
+						}
+						@media print {
+							body { 
+								padding: 15mm;
+							}
+							@page { 
+								margin: 15mm;
+								size: A4 portrait;
+							}
+							thead {
+								display: table-header-group;
+							}
+							tfoot {
+								display: table-footer-group;
+								page-break-inside: avoid;
+							}
+							tbody {
+								page-break-inside: auto;
+							}
+							tr {
+								page-break-inside: avoid;
+								page-break-after: auto;
+							}
+						}
+					</style>
+				</head>
+				<body>
+					<div class="report-header">
+						<h1>Project Profitability Report</h1>
+						<div class="print-date">Printed on: ${formattedDate}</div>
+					</div>
+					${table.outerHTML}
+				</body>
+			</html>
+		`);
+		printWindow.document.close();
+		printWindow.focus();
+		setTimeout(() => {
+			printWindow.print();
+			printWindow.close();
+		}, 250);
 	}
 }
