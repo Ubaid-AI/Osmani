@@ -1,0 +1,76 @@
+[
+ {
+  "charts": [],
+  "content": "[{\"id\":\"VUcq2u1tkF\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Company Information\",\"col\":12}},{\"id\":\"lLbLk1Z9GX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Account Freeze Rule\",\"col\":3}},{\"id\":\"ylu1hyBy30\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Record Filter\",\"col\":3}}]",
+  "custom_blocks": [
+   {
+    "custom_block_name": "Company Information",
+    "label": "Company Information",
+    "parent": "OCL",
+    "parentfield": "custom_blocks",
+    "parenttype": "Workspace"
+   }
+  ],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "color-review-points",
+  "indicator_color": "green",
+  "is_hidden": 0,
+  "label": "OCL",
+  "links": [],
+  "modified": "2026-01-22 10:19:52.895141",
+  "module": null,
+  "name": "OCL",
+  "number_cards": [],
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "restrict_to_domain": null,
+  "roles": [
+   {
+    "parent": "OCL",
+    "parentfield": "roles",
+    "parenttype": "Workspace",
+    "role": "System Manager"
+   }
+  ],
+  "sequence_id": 39.0,
+  "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Account Freeze Rule",
+    "link_to": "Account Freeze Rule",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": "[]",
+    "type": "DocType",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "User Record Filter",
+    "link_to": "User Record Filter",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": "[]",
+    "type": "DocType",
+    "url": null
+   }
+  ],
+  "title": "OCL"
+ }
+]

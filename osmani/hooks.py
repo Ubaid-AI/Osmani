@@ -161,7 +161,14 @@ doc_events = {
 	}
 }
 
-
+fixtures = [
+    {
+        "dt": "Workspace",
+        "filters": [
+            ["name", "=", "OCL"]
+        ]
+    }
+]
 
 # Scheduled Tasks
 # ---------------
