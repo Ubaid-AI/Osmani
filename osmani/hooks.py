@@ -154,6 +154,13 @@ permission_query_conditions = {
 #     }
 # }
 
+# Account Freeze Validation for GL Entry
+doc_events = {
+	"GL Entry": {
+		"validate": "osmani.osmani.utils.account_freeze_validation.validate_frozen_account"
+	}
+}
+
 
 
 # Scheduled Tasks
