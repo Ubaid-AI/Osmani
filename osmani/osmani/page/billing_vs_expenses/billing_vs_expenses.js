@@ -111,10 +111,8 @@ class BillingVsExpensesReport {
 				label: 'Projects',
 				fieldname: 'projects',
 				placeholder: 'Select Projects (leave empty for all)',
-				get_data: function() {
-					return frappe.db.get_link_options('Project', '', {
-						status: ['!=', 'Cancelled']
-					});
+				get_data: function(txt) {
+					return frappe.db.get_link_options('Project', txt);
 				},
 				onchange: function() {
 					me.filters.projects = me.project_field.get_value() || [];
@@ -122,6 +120,20 @@ class BillingVsExpensesReport {
 			},
 			render_input: true
 		});
+		
+		// Load all projects initially (no status filter - show all)
+		frappe.db.get_list('Project', {
+			fields: ['name'],
+			limit: 0,
+			order_by: 'name'
+		}).then(projects => {
+			// MultiSelectList doesn't have set_data, it uses get_data callback
+			// Just refresh to trigger the get_data
+			if (me.project_field) {
+				me.project_field.refresh();
+			}
+		});
+		
 		this.project_field.set_value([]);
 
 		// Include Tax Checkbox
@@ -177,42 +189,95 @@ class BillingVsExpensesReport {
 			</div>
 		`);
 
+		// Call server-side method to get GL entries
 		frappe.call({
-			method: 'frappe.client.get_list',
+			method: 'osmani.osmani.page.billing_vs_expenses.billing_vs_expenses.get_gl_entries_for_projects',
 			args: {
-				doctype: 'Sales Invoice',
-				filters: [
-					['docstatus', '=', 1],
-					['posting_date', '>=', this.filters.from_date],
-					['posting_date', '<=', this.filters.to_date],
-					['project', '!=', '']
-				],
-				fields: ['project', 'posting_date', 'net_total', 'grand_total'],
-				limit_page_length: 0
+				from_date: this.filters.from_date,
+				to_date: this.filters.to_date,
+				projects: this.filters.projects
 			},
 			callback: function(r) {
-				const sales_data = r.message || [];
+				const gl_entries = r.message || [];
+				console.log('GL Entries found:', gl_entries.length);
+				if (gl_entries.length > 0) {
+					console.log('Sample GL Entry:', gl_entries[0]);
+				}
 				
-				frappe.call({
-					method: 'frappe.client.get_list',
-					args: {
-						doctype: 'Purchase Invoice',
-						filters: [
-							['docstatus', '=', 1],
-							['posting_date', '>=', me.filters.from_date],
-							['posting_date', '<=', me.filters.to_date],
-							['project', '!=', '']
-						],
-						fields: ['project', 'posting_date', 'grand_total'],
-						limit_page_length: 0
-					},
-					callback: function(r2) {
-						const purchase_data = r2.message || [];
-						me.render_report(sales_data, purchase_data);
-					}
-				});
+				me.render_report_from_gl(gl_entries);
 			}
 		});
+	}
+
+	render_report_from_gl(gl_entries) {
+		const months = this.get_months_between(this.filters.from_date, this.filters.to_date);
+		const project_data = {};
+
+		// Determine tax label
+		const tax_label = this.filters.include_tax ? 'Incl. ST' : 'Excl. ST';
+		
+		// Store report data for export
+		this.report_data = { months, project_data, tax_label };
+
+		console.log('Months to display:', months);
+		console.log('Processing', gl_entries.length, 'GL entries');
+
+		// Process GL Entries - EXACT same logic as Profitability Analysis (line 111-114)
+		gl_entries.forEach(entry => {
+			if (!entry[1]) return; // project is at index 1
+			
+			const project = entry[1];
+			const posting_date = entry[0];
+			const debit = entry[2] || 0;
+			const credit = entry[3] || 0;
+			const is_opening = entry[4];
+			const type = entry[5]; // 'Income' or 'Expense'
+			
+			// Skip opening entries
+			if (is_opening === 'Yes') return;
+			
+			// Skip if not Income or Expense
+			if (type !== 'Income' && type !== 'Expense') return;
+			
+			if (!project_data[project]) {
+				project_data[project] = {};
+			}
+
+			const month_key = posting_date.substr(0, 7); // YYYY-MM
+			
+			if (!project_data[project][month_key]) {
+				project_data[project][month_key] = { billing: 0, expense: 0 };
+			}
+
+			// EXACT logic from Profitability Analysis (lines 111-114)
+			if (type === 'Income') {
+				project_data[project][month_key].billing += (credit - debit);
+			}
+			if (type === 'Expense') {
+				project_data[project][month_key].expense += (debit - credit);
+			}
+			
+			console.log('Entry:', project, month_key, type, 'Debit:', debit, 'Credit:', credit);
+		});
+
+		// Update stored report data with processed project_data
+		this.report_data.project_data = project_data;
+
+		console.log('Final project_data:', project_data);
+
+		const projects = Object.keys(project_data).sort();
+
+		if (projects.length === 0) {
+			this.parent.find('.bve-report-content').html(`
+				<div style="text-align: center; padding: 60px; color: #888;">
+					<p><i class="fa fa-exclamation-triangle fa-2x"></i></p>
+					<p style="margin-top: 15px;">No data found for the selected filters</p>
+				</div>
+			`);
+			return;
+		}
+
+		this.render_table(months, project_data, projects, tax_label);
 	}
 
 	render_report(sales_data, purchase_data) {
@@ -228,9 +293,15 @@ class BillingVsExpensesReport {
 		// Store report data for export
 		this.report_data = { months, project_data, tax_label };
 
+		console.log('Months to display:', months);
+		console.log('Selected projects:', selected_projects);
+
 		// Process sales data
 		sales_data.forEach(inv => {
-			if (selected_projects.length > 0 && !selected_projects.includes(inv.project)) return;
+			// Skip return invoices (double check)
+			if (inv.is_return) return;
+			// Skip if no project
+			if (!inv.project) return;
 			
 			if (!project_data[inv.project]) {
 				project_data[inv.project] = {};
@@ -245,11 +316,16 @@ class BillingVsExpensesReport {
 			// Use grand_total if include_tax is true, otherwise use net_total
 			const amount = this.filters.include_tax ? (inv.grand_total || 0) : (inv.net_total || 0);
 			project_data[inv.project][month_key].billing += amount;
+			
+			console.log('Sales Invoice:', inv.name, 'Project:', inv.project, 'Month:', month_key, 'Amount:', amount);
 		});
 
 		// Process purchase data
 		purchase_data.forEach(inv => {
-			if (selected_projects.length > 0 && !selected_projects.includes(inv.project)) return;
+			// Skip return invoices (double check)
+			if (inv.is_return) return;
+			// Skip if no project
+			if (!inv.project) return;
 			
 			if (!project_data[inv.project]) {
 				project_data[inv.project] = {};
@@ -262,10 +338,14 @@ class BillingVsExpensesReport {
 			}
 
 			project_data[inv.project][month_key].expense += (inv.grand_total || 0);
+			
+			console.log('Purchase Invoice:', inv.name, 'Project:', inv.project, 'Month:', month_key, 'Amount:', inv.grand_total);
 		});
 
 		// Update stored report data with processed project_data
 		this.report_data.project_data = project_data;
+
+		console.log('Final project_data:', project_data);
 
 		const projects = Object.keys(project_data).sort();
 
@@ -279,6 +359,10 @@ class BillingVsExpensesReport {
 			return;
 		}
 
+		this.render_table(months, project_data, projects, tax_label);
+	}
+
+	render_table(months, project_data, projects, tax_label) {
 		// Generate month headers
 		const month_headers = months.map(m => `<th colspan="2">${m.label}</th>`).join('');
 		const month_subheaders = months.map(() => `<th>Billing</th><th>Expense</th>`).join('');
@@ -403,19 +487,31 @@ class BillingVsExpensesReport {
 
 	get_months_between(from_date, to_date) {
 		const months = [];
-		const start = new Date(from_date);
-		const end = new Date(to_date);
+		
+		// Parse dates properly
+		const start = frappe.datetime.str_to_obj(from_date);
+		const end = frappe.datetime.str_to_obj(to_date);
 
+		// Start from the first day of the from_date month
 		let current = new Date(start.getFullYear(), start.getMonth(), 1);
 		const last = new Date(end.getFullYear(), end.getMonth(), 1);
 
 		while (current <= last) {
-			const month_key = current.toISOString().substr(0, 7);
+			// Format as YYYY-MM for consistency
+			const year = current.getFullYear();
+			const month = String(current.getMonth() + 1).padStart(2, '0');
+			const month_key = `${year}-${month}`;
+			
+			// Format label as "Jan-2025"
 			const month_label = current.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+			
 			months.push({ key: month_key, label: month_label });
+			
+			// Move to next month
 			current.setMonth(current.getMonth() + 1);
 		}
 
+		console.log('Months calculated:', months);
 		return months;
 	}
 
