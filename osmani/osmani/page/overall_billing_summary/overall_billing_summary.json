@@ -1,0 +1,19 @@
+{
+ "content": null,
+ "creation": "2026-01-23 18:00:46.788430",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-01-23 18:00:46.788430",
+ "modified_by": "Administrator",
+ "module": "Osmani",
+ "name": "overall-billing-summary",
+ "owner": "Administrator",
+ "page_name": "overall-billing-summary",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Overall Billing Summary"
+}

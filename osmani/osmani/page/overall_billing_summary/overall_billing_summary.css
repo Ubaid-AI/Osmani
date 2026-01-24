@@ -1,0 +1,154 @@
+/* Overall Billing Summary Page Styles */
+
+.obs-page-content {
+	padding: 20px;
+	background: #fff;
+}
+
+/* Filter Section */
+.obs-filters {
+	background: white;
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	margin-bottom: 20px;
+}
+
+.obs-filters .row {
+	display: flex;
+	align-items: flex-end;
+}
+
+.obs-filters label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 6px;
+	font-size: 12px;
+	color: #333;
+}
+
+.obs-date-field,
+.obs-project-field,
+.obs-tax-field {
+	width: 100%;
+}
+
+.obs-filters .btn {
+	white-space: nowrap;
+}
+
+/* Report Content */
+.obs-report-content {
+	background: white;
+	border: 1px solid #d1d8dd;
+	border-radius: 6px;
+	overflow-x: auto;
+}
+
+.obs-report-content table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+.obs-report-content th {
+	background: #f4f6f8;
+	padding: 10px;
+	text-align: center;
+	font-weight: 600;
+	border: 1px solid #d1d8dd;
+	white-space: nowrap;
+}
+
+.obs-report-content td {
+	padding: 8px 10px;
+	border: 1px solid #d1d8dd;
+	text-align: right;
+}
+
+.obs-report-content td.project-name {
+	text-align: left;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.obs-report-content td.total-col {
+	background-color: #fafafa;
+	font-weight: 600;
+}
+
+.obs-report-content tr.grand-total {
+	background-color: #e9ecef;
+	font-weight: 700;
+}
+
+.obs-report-content tr.grand-total td {
+	font-weight: 700;
+}
+
+/* Report Header */
+.obs-report-header {
+	text-align: center;
+	padding: 20px;
+	border-bottom: 2px solid #d1d8dd;
+	position: relative;
+}
+
+.obs-report-badge {
+	position: absolute;
+	left: 20px;
+	top: 20px;
+	border: 1px solid #000;
+	padding: 4px 14px;
+	font-weight: 700;
+	font-size: 12px;
+}
+
+.obs-report-header h1 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+}
+
+.obs-report-header h2 {
+	margin: 6px 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.obs-report-header h3 {
+	margin: 4px 0;
+	font-size: 12px;
+	font-weight: 500;
+	color: #666;
+}
+
+.obs-report-meta {
+	position: absolute;
+	right: 20px;
+	top: 45px;
+	font-size: 11px;
+	color: #666;
+}
+
+/* Print Styles */
+@media print {
+	.obs-filters,
+	.page-head,
+	.page-actions {
+		display: none !important;
+	}
+	
+	.obs-page-content {
+		padding: 0;
+	}
+	
+	.obs-report-content {
+		border: none;
+	}
+	
+	body {
+		margin: 10mm;
+	}
+}

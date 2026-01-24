@@ -108,7 +108,6 @@ class BillingVsExpensesReport {
 			parent: this.parent.find('.bve-project-field'),
 			df: {
 				fieldtype: 'MultiSelectList',
-				label: 'Projects',
 				fieldname: 'projects',
 				placeholder: 'Select Projects (leave empty for all)',
 				get_data: function(txt) {
@@ -118,7 +117,8 @@ class BillingVsExpensesReport {
 					me.filters.projects = me.project_field.get_value() || [];
 				}
 			},
-			render_input: true
+			render_input: true,
+			only_input: true
 		});
 		
 		// Load all projects initially (no status filter - show all)
