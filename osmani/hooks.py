@@ -167,6 +167,12 @@ fixtures = [
         "filters": [
             ["name", "=", "OCL"]
         ]
+    },
+    {
+        "dt": "Role",
+        "filters": [
+            ["name", "=", "OCL"]
+        ]
     }
 ]
 
