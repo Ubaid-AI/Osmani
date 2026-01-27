@@ -306,13 +306,26 @@ class OverallBillingSummaryReport {
 			return date.toLocaleString('en-US', { month: 'short', year: 'numeric' });
 		}).join('</th><th>');
 
-		// Build project rows
-		let project_rows = '';
+		// Calculate totals for each project and sort by total descending
+		const project_totals = [];
 		projects.forEach(project => {
 			let row_total = 0;
+			months.forEach(month => {
+				row_total += project_data[project][month] || 0;
+			});
+			project_totals.push({ project, total: row_total });
+		});
+		
+		// Sort by total descending
+		project_totals.sort((a, b) => b.total - a.total);
+		
+		// Build project rows with sorted data
+		let project_rows = '';
+		const chart_data = { projects: [], totals: [] };
+		
+		project_totals.forEach(({ project, total }) => {
 			const cells = months.map(month => {
 				const value = project_data[project][month] || 0;
-				row_total += value;
 				return `<td>${this.format_currency(value)}</td>`;
 			}).join('');
 			
@@ -320,10 +333,19 @@ class OverallBillingSummaryReport {
 				<tr>
 					<td class="project-name">${project}</td>
 					${cells}
-					<td class="total-col">${this.format_currency(row_total)}</td>
+					<td class="total-col">${this.format_currency(total)}</td>
 				</tr>
 			`;
+			
+			// Collect data for charts
+			chart_data.projects.push(project);
+			chart_data.totals.push(total);
 		});
+		
+		// Store chart data
+		this.chart_data = chart_data;
+		this.chart_months = months;
+		this.chart_project_data = project_data;
 
 		// Build grand total row
 		let grand_total = 0;
@@ -366,9 +388,265 @@ class OverallBillingSummaryReport {
 					</tr>
 				</tfoot>
 			</table>
+			
+			<div class="obs-charts-section">
+				<div class="charts-row">
+					<div class="chart-container">
+						<h4 class="chart-title">Project-wise Total Billing</h4>
+						<div id="obs-pie-chart"></div>
+					</div>
+					<div class="chart-container">
+						<h4 class="chart-title">Monthly Comparison (Top 10 Projects)</h4>
+						<div id="obs-bar-chart"></div>
+					</div>
+				</div>
+			</div>
 		`;
 
 		this.parent.find('.obs-report-content').html(html);
+		
+		// Render charts
+		setTimeout(() => this.render_charts(), 100);
+	}
+	
+	render_charts() {
+		if (!this.chart_data) return;
+		
+		// Simple approach: render charts using HTML/CSS for better compatibility
+		this.render_pie_chart_html();
+		this.render_bar_chart_html();
+	}
+	
+	render_pie_chart_html() {
+		const container = document.getElementById('obs-pie-chart');
+		if (!container) return;
+		
+		const total = this.chart_data.totals.reduce((sum, val) => sum + val, 0);
+		
+		// Calculate angles for pie slices
+		let currentAngle = 0;
+		const slices = [];
+		
+		this.chart_data.projects.forEach((project, idx) => {
+			const value = this.chart_data.totals[idx];
+			const percentage = (value / total) * 100;
+			const angle = (percentage / 100) * 360;
+			
+			slices.push({
+				project,
+				value,
+				percentage: percentage.toFixed(1),
+				startAngle: currentAngle,
+				endAngle: currentAngle + angle,
+				color: this.get_chart_color(idx)
+			});
+			
+			currentAngle += angle;
+		});
+		
+		// Create SVG pie chart
+		let html = '<div class="custom-pie-chart">';
+		html += '<svg viewBox="0 0 200 200" class="pie-svg">';
+		
+		slices.forEach(slice => {
+			const path = this.create_pie_slice(100, 100, 80, slice.startAngle, slice.endAngle);
+			html += `<path d="${path}" fill="${slice.color}" class="pie-slice" 
+				data-project="${slice.project}" data-value="${this.format_currency(slice.value)}" 
+				data-percentage="${slice.percentage}%"></path>`;
+		});
+		
+		html += '</svg>';
+		
+		// Add legend
+		html += '<div class="pie-legend-compact">';
+		slices.forEach(slice => {
+			html += `
+				<div class="legend-item-compact">
+					<span class="legend-color" style="background-color: ${slice.color};"></span>
+					<span class="legend-text">${slice.project} (${slice.percentage}%)</span>
+				</div>
+			`;
+		});
+		html += '</div></div>';
+		
+		container.innerHTML = html;
+		
+		// Create tooltip element
+		const tooltip = document.createElement('div');
+		tooltip.className = 'chart-tooltip';
+		tooltip.style.display = 'none';
+		container.appendChild(tooltip);
+		
+		// Add hover tooltips
+		container.querySelectorAll('.pie-slice').forEach(slice => {
+			slice.addEventListener('mouseenter', (e) => {
+				const project = e.target.getAttribute('data-project');
+				const value = e.target.getAttribute('data-value');
+				const percentage = e.target.getAttribute('data-percentage');
+				tooltip.innerHTML = `<strong>${project}</strong><br>${value}<br>(${percentage})`;
+				tooltip.style.display = 'block';
+			});
+			
+			slice.addEventListener('mousemove', (e) => {
+				const rect = container.getBoundingClientRect();
+				tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+				tooltip.style.top = (e.clientY - rect.top + 10) + 'px';
+			});
+			
+			slice.addEventListener('mouseleave', () => {
+				tooltip.style.display = 'none';
+			});
+		});
+	}
+	
+	create_pie_slice(cx, cy, radius, startAngle, endAngle) {
+		const start = this.polar_to_cartesian(cx, cy, radius, endAngle);
+		const end = this.polar_to_cartesian(cx, cy, radius, startAngle);
+		const largeArc = endAngle - startAngle <= 180 ? '0' : '1';
+		
+		return [
+			'M', cx, cy,
+			'L', start.x, start.y,
+			'A', radius, radius, 0, largeArc, 0, end.x, end.y,
+			'Z'
+		].join(' ');
+	}
+	
+	polar_to_cartesian(cx, cy, radius, angle) {
+		const rad = (angle - 90) * Math.PI / 180;
+		return {
+			x: cx + radius * Math.cos(rad),
+			y: cy + radius * Math.sin(rad)
+		};
+	}
+	
+	render_bar_chart_html() {
+		const container = document.getElementById('obs-bar-chart');
+		if (!container) return;
+		
+		// Get top 8 projects for compact view
+		const top_count = Math.min(8, this.chart_data.projects.length);
+		const top_projects = this.chart_data.projects.slice(0, top_count);
+		
+		// Get month labels
+		const month_labels = this.chart_months.map(month => {
+			const [year, mon] = month.split('-');
+			const date = new Date(year, parseInt(mon) - 1);
+			return date.toLocaleString('en-US', { month: 'short' });
+		});
+		
+		// Calculate totals per month
+		const month_totals = this.chart_months.map(month => {
+			let total = 0;
+			top_projects.forEach(project => {
+				total += this.chart_project_data[project][month] || 0;
+			});
+			return total;
+		});
+		
+		const max_value = Math.max(...month_totals);
+		
+		let html = '<div class="custom-bar-chart">';
+		
+		// Create bar chart with SVG
+		html += '<div class="bar-chart-svg-container">';
+		html += '<svg viewBox="0 0 400 180" class="bar-svg">';
+		
+		const barWidth = 360 / this.chart_months.length;
+		const chartHeight = 140;
+		
+		this.chart_months.forEach((month, idx) => {
+			const x = 20 + (idx * barWidth);
+			let currentY = chartHeight;
+			
+			// Draw stacked bars for each project
+			top_projects.forEach((project, proj_idx) => {
+				const value = this.chart_project_data[project][month] || 0;
+				const height = max_value > 0 ? (value / max_value * chartHeight) : 0;
+				
+				if (height > 0) {
+					const barX = x + (barWidth * 0.2);
+					const barW = barWidth * 0.6;
+					const color = this.get_chart_color(proj_idx);
+					
+					html += `<rect x="${barX}" y="${currentY - height}" width="${barW}" height="${height}" 
+						fill="${color}" class="bar-rect" rx="2"
+						data-project="${project}" data-value="${this.format_currency(value)}" 
+						data-month="${month_labels[idx]}"></rect>`;
+					
+					currentY -= height;
+				}
+			});
+			
+			// Month label
+			html += `<text x="${x + barWidth/2}" y="165" class="bar-month-label" text-anchor="middle">${month_labels[idx]}</text>`;
+		});
+		
+		html += '</svg></div>';
+		
+		// Add compact legend
+		html += '<div class="bar-legend-compact">';
+		top_projects.forEach((project, idx) => {
+			const color = this.get_chart_color(idx);
+			html += `
+				<div class="bar-legend-item-compact">
+					<span class="legend-color" style="background-color: ${color};"></span>
+					<span class="legend-text">${project}</span>
+				</div>
+			`;
+		});
+		html += '</div>';
+		
+		html += '</div>';
+		
+		container.innerHTML = html;
+		
+		// Create tooltip element
+		const tooltip = document.createElement('div');
+		tooltip.className = 'chart-tooltip';
+		tooltip.style.display = 'none';
+		container.appendChild(tooltip);
+		
+		// Add hover tooltips
+		container.querySelectorAll('.bar-rect').forEach(rect => {
+			rect.addEventListener('mouseenter', (e) => {
+				const project = e.target.getAttribute('data-project');
+				const value = e.target.getAttribute('data-value');
+				const month = e.target.getAttribute('data-month');
+				tooltip.innerHTML = `<strong>${month}</strong><br>${project}<br>${value}`;
+				tooltip.style.display = 'block';
+			});
+			
+			rect.addEventListener('mousemove', (e) => {
+				const containerRect = container.getBoundingClientRect();
+				tooltip.style.left = (e.clientX - containerRect.left + 10) + 'px';
+				tooltip.style.top = (e.clientY - containerRect.top + 10) + 'px';
+			});
+			
+			rect.addEventListener('mouseleave', () => {
+				tooltip.style.display = 'none';
+			});
+		});
+	}
+	
+	get_chart_color(index) {
+		const colors = [
+			'#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+			'#fa709a', '#fee140', '#30cfd0', '#a8edea', '#ff6a88',
+			'#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#00d2d3'
+		];
+		return colors[index % colors.length];
+	}
+	
+	format_number_short(num) {
+		if (num >= 10000000) {
+			return (num / 10000000).toFixed(1) + 'Cr';
+		} else if (num >= 100000) {
+			return (num / 100000).toFixed(1) + 'L';
+		} else if (num >= 1000) {
+			return (num / 1000).toFixed(1) + 'K';
+		}
+		return num.toFixed(0);
 	}
 
 	export_to_excel() {

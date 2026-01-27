@@ -132,8 +132,273 @@
 	color: #666;
 }
 
+/* Charts Section */
+.obs-charts-section {
+	margin-top: 25px;
+	padding: 15px;
+	background: var(--bg-color, #f8f9fa);
+	border: 1px solid var(--border-color, #e0e0e0);
+	border-radius: 6px;
+}
+
+.charts-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 15px;
+}
+
+.chart-container {
+	background: white;
+	border-radius: 6px;
+	padding: 12px;
+	border: 1px solid var(--border-color, #e0e0e0);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.chart-title {
+	color: var(--text-color, #333);
+	font-size: 13px;
+	font-weight: 600;
+	margin-bottom: 10px;
+	text-align: center;
+	padding-bottom: 6px;
+	border-bottom: 2px solid var(--primary-color, #2490ef);
+}
+
+/* Pie Chart Styles */
+.custom-pie-chart {
+	display: flex;
+	gap: 15px;
+	align-items: center;
+}
+
+.pie-svg {
+	width: 150px;
+	height: 150px;
+	flex-shrink: 0;
+}
+
+.pie-slice {
+	cursor: pointer;
+	transition: opacity 0.2s;
+	stroke: white;
+	stroke-width: 1;
+}
+
+.pie-slice:hover {
+	opacity: 0.8;
+}
+
+.pie-legend-compact {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	max-height: 150px;
+	overflow-y: auto;
+	font-size: 10px;
+}
+
+.legend-item-compact {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.legend-color {
+	width: 12px;
+	height: 12px;
+	border-radius: 2px;
+	flex-shrink: 0;
+}
+
+.legend-text {
+	font-size: 10px;
+	color: var(--text-color, #555);
+	line-height: 1.3;
+}
+
+/* Bar Chart Styles */
+.custom-bar-chart {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.bar-chart-svg-container {
+	width: 100%;
+}
+
+.bar-svg {
+	width: 100%;
+	height: 180px;
+}
+
+.bar-rect {
+	cursor: pointer;
+	transition: opacity 0.2s;
+	stroke: white;
+	stroke-width: 1;
+}
+
+.bar-rect:hover {
+	opacity: 0.8;
+}
+
+.bar-month-label {
+	font-size: 9px;
+	fill: var(--text-muted, #888);
+	font-weight: 500;
+}
+
+.bar-legend-compact {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	justify-content: center;
+	padding: 8px;
+	background: var(--bg-light, #fafbfc);
+	border-radius: 4px;
+	border: 1px solid var(--border-color, #e8e8e8);
+}
+
+.bar-legend-item-compact {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 9px;
+}
+
+/* Scrollbar styling for legend */
+.pie-legend-compact::-webkit-scrollbar {
+	width: 4px;
+}
+
+.pie-legend-compact::-webkit-scrollbar-track {
+	background: #f1f1f1;
+	border-radius: 2px;
+}
+
+.pie-legend-compact::-webkit-scrollbar-thumb {
+	background: #888;
+	border-radius: 2px;
+}
+
+.pie-legend-compact::-webkit-scrollbar-thumb:hover {
+	background: #555;
+}
+
+/* Chart Tooltip */
+.chart-tooltip {
+	position: absolute;
+	background: rgba(0, 0, 0, 0.85);
+	color: white;
+	padding: 8px 12px;
+	border-radius: 4px;
+	font-size: 11px;
+	line-height: 1.5;
+	pointer-events: none;
+	z-index: 1000;
+	white-space: nowrap;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.chart-tooltip strong {
+	color: #fff;
+	font-weight: 600;
+}
+
+.chart-container {
+	position: relative;
+}
+
 /* Print Styles */
 @media print {
+	/* Hide unnecessary elements */
+	.obs-charts-section,
+	.obs-filters,
+	.page-head,
+	.page-actions,
+	.page-title,
+	.navbar,
+	.sidebar-wrapper,
+	.layout-side-section {
+		display: none !important;
+	}
+
+	.obs-page-content {
+		padding: 0;
+		background: white;
+	}
+
+	.obs-report-content {
+		box-shadow: none;
+		padding: 10mm;
+		overflow: visible;
+	}
+
+	/* Page setup for different sizes */
+	@page {
+		size: auto;
+		margin: 10mm;
+	}
+
+	/* Ensure content fits */
+	body {
+		margin: 0;
+		padding: 0;
+	}
+
+	/* Table styling for print */
+	.obs-report-content table {
+		width: 100%;
+		page-break-inside: auto;
+		font-size: 9px;
+		border-collapse: collapse;
+	}
+
+	.obs-report-content tr {
+		page-break-inside: avoid;
+		page-break-after: auto;
+	}
+
+	.obs-report-content thead {
+		display: table-header-group;
+	}
+
+	.obs-report-content tfoot {
+		display: table-footer-group;
+	}
+
+	.obs-report-content th,
+	.obs-report-content td {
+		padding: 4px 6px;
+		font-size: 8px;
+	}
+
+	/* Header styling */
+	.obs-report-header h1 {
+		font-size: 14px;
+	}
+
+	.obs-report-header h2 {
+		font-size: 12px;
+	}
+
+	.obs-report-header h3 {
+		font-size: 10px;
+	}
+
+	.obs-report-meta {
+		font-size: 9px;
+	}
+
+	/* Fit to page width */
+	.obs-report-content {
+		max-width: 100%;
+		overflow: hidden;
+	}
+	
 	.obs-filters,
 	.page-head,
 	.page-actions {

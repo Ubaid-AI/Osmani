@@ -257,10 +257,276 @@ class ExpenseWiseSummaryReport {
 					</tr>
 				</tfoot>
 			</table>
+			
+			<div class="ews-charts-section">
+				<div class="charts-row">
+					<div class="chart-container">
+						<h4 class="chart-title">Expense Head-wise Total</h4>
+						<div id="ews-pie-chart"></div>
+					</div>
+					<div class="chart-container">
+						<h4 class="chart-title">Monthly Expense Trend (Top Categories)</h4>
+						<div id="ews-bar-chart"></div>
+					</div>
+				</div>
+			</div>
 		`;
 		
 		this.parent.find('.ews-report-content').html(html);
 		this.bind_events();
+		
+		// Store chart data
+		this.store_chart_data(root_accounts, months);
+		
+		// Render charts
+		setTimeout(() => this.render_charts(), 100);
+	}
+	
+	store_chart_data(root_accounts, months) {
+		// Get top level accounts with totals
+		const chart_accounts = [];
+		
+		root_accounts.forEach(acc => {
+			const total = this.get_account_total(acc);
+			if (total > 0) {
+				chart_accounts.push({
+					name: acc.account_name,
+					total: total,
+					account: acc
+				});
+			}
+		});
+		
+		// Sort by total descending
+		chart_accounts.sort((a, b) => b.total - a.total);
+		
+		this.chart_data = {
+			accounts: chart_accounts,
+			months: months
+		};
+	}
+	
+	render_charts() {
+		if (!this.chart_data) return;
+		
+		this.render_pie_chart_html();
+		this.render_bar_chart_html();
+	}
+	
+	render_pie_chart_html() {
+		const container = document.getElementById('ews-pie-chart');
+		if (!container) return;
+		
+		const accounts = this.chart_data.accounts.slice(0, 10); // Top 10
+		const total = accounts.reduce((sum, acc) => sum + acc.total, 0);
+		
+		// Calculate angles for pie slices
+		let currentAngle = 0;
+		const slices = [];
+		
+		accounts.forEach((acc, idx) => {
+			const percentage = (acc.total / total) * 100;
+			const angle = (percentage / 100) * 360;
+			
+			slices.push({
+				name: acc.name,
+				value: acc.total,
+				percentage: percentage.toFixed(1),
+				startAngle: currentAngle,
+				endAngle: currentAngle + angle,
+				color: this.get_chart_color(idx)
+			});
+			
+			currentAngle += angle;
+		});
+		
+		// Create SVG pie chart
+		let html = '<div class="custom-pie-chart">';
+		html += '<svg viewBox="0 0 200 200" class="pie-svg">';
+		
+		slices.forEach(slice => {
+			const path = this.create_pie_slice(100, 100, 80, slice.startAngle, slice.endAngle);
+			html += `<path d="${path}" fill="${slice.color}" class="pie-slice" 
+				data-account="${slice.name}" data-value="${this.format_currency(slice.value)}" 
+				data-percentage="${slice.percentage}%"></path>`;
+		});
+		
+		html += '</svg>';
+		
+		// Add legend
+		html += '<div class="pie-legend-compact">';
+		slices.forEach(slice => {
+			html += `
+				<div class="legend-item-compact">
+					<span class="legend-color" style="background-color: ${slice.color};"></span>
+					<span class="legend-text">${slice.name} (${slice.percentage}%)</span>
+				</div>
+			`;
+		});
+		html += '</div></div>';
+		
+		container.innerHTML = html;
+		
+		// Create tooltip element
+		const tooltip = document.createElement('div');
+		tooltip.className = 'chart-tooltip';
+		tooltip.style.display = 'none';
+		container.appendChild(tooltip);
+		
+		// Add hover tooltips
+		container.querySelectorAll('.pie-slice').forEach(slice => {
+			slice.addEventListener('mouseenter', (e) => {
+				const account = e.target.getAttribute('data-account');
+				const value = e.target.getAttribute('data-value');
+				const percentage = e.target.getAttribute('data-percentage');
+				tooltip.innerHTML = `<strong>${account}</strong><br>${value}<br>(${percentage})`;
+				tooltip.style.display = 'block';
+			});
+			
+			slice.addEventListener('mousemove', (e) => {
+				const rect = container.getBoundingClientRect();
+				tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+				tooltip.style.top = (e.clientY - rect.top + 10) + 'px';
+			});
+			
+			slice.addEventListener('mouseleave', () => {
+				tooltip.style.display = 'none';
+			});
+		});
+	}
+	
+	render_bar_chart_html() {
+		const container = document.getElementById('ews-bar-chart');
+		if (!container) return;
+		
+		// Get top 8 accounts
+		const top_count = Math.min(8, this.chart_data.accounts.length);
+		const top_accounts = this.chart_data.accounts.slice(0, top_count);
+		
+		const months = this.chart_data.months;
+		
+		// Calculate totals per month for each account
+		const month_totals = months.map(() => 0);
+		
+		months.forEach((month, idx) => {
+			top_accounts.forEach(acc => {
+				month_totals[idx] += (acc.account[month.key] || 0);
+			});
+		});
+		
+		const max_value = Math.max(...month_totals);
+		
+		let html = '<div class="custom-bar-chart">';
+		
+		// Create bar chart with SVG
+		html += '<div class="bar-chart-svg-container">';
+		html += '<svg viewBox="0 0 400 180" class="bar-svg">';
+		
+		const barWidth = 360 / months.length;
+		const chartHeight = 140;
+		
+		months.forEach((month, idx) => {
+			const x = 20 + (idx * barWidth);
+			let currentY = chartHeight;
+			
+			// Draw stacked bars for each account
+			top_accounts.forEach((acc, acc_idx) => {
+				const value = acc.account[month.key] || 0;
+				const height = max_value > 0 ? (value / max_value * chartHeight) : 0;
+				
+				if (height > 0) {
+					const barX = x + (barWidth * 0.2);
+					const barW = barWidth * 0.6;
+					const color = this.get_chart_color(acc_idx);
+					
+					html += `<rect x="${barX}" y="${currentY - height}" width="${barW}" height="${height}" 
+						fill="${color}" class="bar-rect" rx="2"
+						data-account="${acc.name}" data-value="${this.format_currency(value)}" 
+						data-month="${month.label}"></rect>`;
+					
+					currentY -= height;
+				}
+			});
+			
+			// Month label
+			html += `<text x="${x + barWidth/2}" y="165" class="bar-month-label" text-anchor="middle">${month.label}</text>`;
+		});
+		
+		html += '</svg></div>';
+		
+		// Add compact legend
+		html += '<div class="bar-legend-compact">';
+		top_accounts.forEach((acc, idx) => {
+			const color = this.get_chart_color(idx);
+			html += `
+				<div class="bar-legend-item-compact">
+					<span class="legend-color" style="background-color: ${color};"></span>
+					<span class="legend-text">${acc.name}</span>
+				</div>
+			`;
+		});
+		html += '</div>';
+		
+		html += '</div>';
+		
+		container.innerHTML = html;
+		
+		// Create tooltip element
+		const tooltip = document.createElement('div');
+		tooltip.className = 'chart-tooltip';
+		tooltip.style.display = 'none';
+		container.appendChild(tooltip);
+		
+		// Add hover tooltips
+		container.querySelectorAll('.bar-rect').forEach(rect => {
+			rect.addEventListener('mouseenter', (e) => {
+				const account = e.target.getAttribute('data-account');
+				const value = e.target.getAttribute('data-value');
+				const month = e.target.getAttribute('data-month');
+				tooltip.innerHTML = `<strong>${month}</strong><br>${account}<br>${value}`;
+				tooltip.style.display = 'block';
+			});
+			
+			rect.addEventListener('mousemove', (e) => {
+				const containerRect = container.getBoundingClientRect();
+				tooltip.style.left = (e.clientX - containerRect.left + 10) + 'px';
+				tooltip.style.top = (e.clientY - containerRect.top + 10) + 'px';
+			});
+			
+			rect.addEventListener('mouseleave', () => {
+				tooltip.style.display = 'none';
+			});
+		});
+	}
+	
+	create_pie_slice(cx, cy, radius, startAngle, endAngle) {
+		const start = this.polar_to_cartesian(cx, cy, radius, endAngle);
+		const end = this.polar_to_cartesian(cx, cy, radius, startAngle);
+		const largeArc = endAngle - startAngle <= 180 ? '0' : '1';
+		
+		return [
+			'M', cx, cy,
+			'L', start.x, start.y,
+			'A', radius, radius, 0, largeArc, 0, end.x, end.y,
+			'Z'
+		].join(' ');
+	}
+	
+	polar_to_cartesian(cx, cy, radius, angle) {
+		const rad = (angle - 90) * Math.PI / 180;
+		return {
+			x: cx + radius * Math.cos(rad),
+			y: cy + radius * Math.sin(rad)
+		};
+	}
+	
+	get_chart_color(index) {
+		const colors = [
+			'#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+			'#fa709a', '#fee140', '#30cfd0', '#a8edea', '#ff6a88',
+			'#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#00d2d3'
+		];
+		return colors[index % colors.length];
 	}
 
 	render_account_tree(account, level) {

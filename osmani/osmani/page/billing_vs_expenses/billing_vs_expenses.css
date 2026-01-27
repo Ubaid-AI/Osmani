@@ -178,19 +178,399 @@
 	}
 }
 
+/* Charts Section */
+.bve-charts-section {
+	margin-top: 30px;
+	padding: 20px;
+	background: var(--bg-color, #f8f9fa);
+	border: 1px solid var(--border-color, #e0e0e0);
+	border-radius: 8px;
+}
+
+.charts-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 20px;
+}
+
+.chart-container {
+	background: white;
+	border-radius: 8px;
+	padding: 15px;
+	border: 1px solid var(--border-color, #e0e0e0);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+	position: relative;
+	min-height: 250px;
+}
+
+.chart-title {
+	color: var(--text-color, #333);
+	font-size: 14px;
+	font-weight: 600;
+	margin-bottom: 15px;
+	text-align: center;
+	padding-bottom: 8px;
+	border-bottom: 3px solid var(--primary-color, #2490ef);
+}
+
+/* 3D Bar Chart */
+.custom-3d-bar-chart {
+	width: 100%;
+	height: 220px;
+}
+
+.bar-svg-3d {
+	width: 100%;
+	height: 100%;
+}
+
+.bar-3d {
+	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.bar-3d:hover {
+	opacity: 0.9;
+	filter: brightness(1.1);
+}
+
+.bar-label-3d {
+	font-size: 9px;
+	fill: var(--text-muted, #666);
+	font-weight: 500;
+}
+
+.legend-rect-3d {
+	stroke: white;
+	stroke-width: 1;
+}
+
+.legend-text-3d {
+	font-size: 11px;
+	fill: var(--text-color, #555);
+	font-weight: 500;
+}
+
+/* Line Chart */
+.custom-line-chart {
+	width: 100%;
+	height: 200px;
+}
+
+.line-svg {
+	width: 100%;
+	height: 100%;
+}
+
+.line-path {
+	stroke-linecap: round;
+	stroke-linejoin: round;
+	filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.line-point {
+	cursor: pointer;
+	transition: r 0.2s;
+}
+
+.line-point:hover {
+	r: 6;
+}
+
+.month-label-line {
+	font-size: 9px;
+	fill: var(--text-muted, #666);
+	font-weight: 500;
+}
+
+/* Profit Bar Chart */
+.profit-bar-chart {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding: 10px 0;
+	max-height: 220px;
+	overflow-y: auto;
+}
+
+.profit-bar-item {
+	width: 100%;
+}
+
+.profit-bar-wrapper {
+	width: 100%;
+	background: #f0f0f0;
+	border-radius: 6px;
+	overflow: hidden;
+	box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.profit-bar-fill {
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 12px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.profit-bar-fill:hover {
+	filter: brightness(1.05);
+	transform: translateX(3px);
+}
+
+.profit-project-name {
+	font-size: 11px;
+	font-weight: 600;
+	color: white;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.profit-value {
+	font-size: 10px;
+	font-weight: 700;
+	color: white;
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Donut Chart */
+.custom-donut-chart {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 15px;
+}
+
+.donut-svg {
+	width: 200px;
+	height: 200px;
+}
+
+.donut-slice {
+	cursor: pointer;
+	transition: opacity 0.2s;
+	stroke: white;
+	stroke-width: 2;
+	filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.donut-slice:hover {
+	opacity: 0.9;
+}
+
+.donut-center-label {
+	font-size: 12px;
+	fill: var(--text-muted, #666);
+	font-weight: 500;
+}
+
+.donut-center-value {
+	font-size: 14px;
+	fill: var(--text-color, #333);
+	font-weight: 700;
+}
+
+.donut-legend {
+	display: flex;
+	gap: 20px;
+	justify-content: center;
+}
+
+.donut-legend-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	font-weight: 500;
+}
+
+.donut-legend-item .legend-color {
+	width: 16px;
+	height: 16px;
+	border-radius: 3px;
+}
+
+/* Chart Tooltip */
+.chart-tooltip {
+	position: absolute;
+	background: rgba(0, 0, 0, 0.9);
+	color: white;
+	padding: 10px 14px;
+	border-radius: 6px;
+	font-size: 11px;
+	line-height: 1.6;
+	pointer-events: none;
+	z-index: 1000;
+	white-space: nowrap;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.chart-tooltip strong {
+	color: #fff;
+	font-weight: 600;
+}
+
+/* Scrollbar for profit chart */
+.profit-bar-chart::-webkit-scrollbar {
+	width: 6px;
+}
+
+.profit-bar-chart::-webkit-scrollbar-track {
+	background: #f1f1f1;
+	border-radius: 3px;
+}
+
+.profit-bar-chart::-webkit-scrollbar-thumb {
+	background: #888;
+	border-radius: 3px;
+}
+
+.profit-bar-chart::-webkit-scrollbar-thumb:hover {
+	background: #555;
+}
+
 /* Print Styles */
 @media print {
+	/* Page setup - landscape for wide tables */
+	@page {
+		size: landscape;
+		margin: 15mm;
+	}
+
+	/* Hide unnecessary elements */
 	.billing-vs-expenses-report {
 		background: white;
 		padding: 0;
 	}
 
-	.report-filters {
+	.report-filters,
+	.bve-charts-section,
+	.page-head,
+	.page-actions,
+	.page-title,
+	.navbar,
+	.sidebar-wrapper,
+	.layout-side-section,
+	.page-form,
+	.page-body > .page-wrapper {
 		display: none !important;
+		visibility: hidden !important;
 	}
 
-	.report-content {
+	/* Ensure body and html take full width */
+	html, body {
+		margin: 0;
+		padding: 0;
+		width: 100%;
+		max-width: 100%;
+		overflow: hidden;
+	}
+
+	.bve-report-content {
 		box-shadow: none;
 		padding: 0;
+		overflow: visible;
+		width: 100%;
+		max-width: 100%;
+	}
+
+	/* Report header styling */
+	.report-header {
+		text-align: center;
+		margin-bottom: 10px;
+		page-break-after: avoid;
+	}
+
+	.report-header h1 {
+		font-size: 14px;
+		margin: 0;
+		color: #000;
+	}
+
+	.report-header h2 {
+		font-size: 12px;
+		margin: 4px 0;
+		color: #000;
+	}
+
+	.report-header h3 {
+		font-size: 10px;
+		margin: 3px 0;
+		color: #000;
+	}
+
+	.report-meta {
+		font-size: 9px;
+		margin-bottom: 10px;
+		color: #000;
+	}
+
+	/* Table styling for print */
+	.bve-report-content table {
+		width: 100%;
+		max-width: 100%;
+		page-break-inside: auto;
+		font-size: 8px;
+		border-collapse: collapse;
+		table-layout: fixed;
+	}
+
+	.bve-report-content tr {
+		page-break-inside: avoid;
+		page-break-after: auto;
+	}
+
+	.bve-report-content thead {
+		display: table-header-group;
+	}
+
+	.bve-report-content tfoot {
+		display: table-footer-group;
+	}
+
+	.bve-report-content th,
+	.bve-report-content td {
+		padding: 3px 4px;
+		font-size: 7px;
+		border: 1px solid #333 !important;
+		color: #000 !important;
+		word-wrap: break-word;
+	}
+
+	.bve-report-content .project {
+		text-align: left;
+		font-weight: 600;
+	}
+
+	.bve-report-content .total-col {
+		background-color: #fafafa;
+		font-weight: 600;
+	}
+
+	.bve-report-content .positive {
+		color: #0a7a2f !important;
+		font-weight: 600;
+	}
+
+	.bve-report-content .negative {
+		color: #c0392b !important;
+		font-weight: 600;
+	}
+
+	.bve-report-content tfoot tr {
+		background-color: #e9ecef;
+		font-weight: 700;
+	}
+
+	/* Absolutely ensure charts are hidden */
+	.bve-charts-section,
+	.chart-container,
+	.charts-row {
+		display: none !important;
+		visibility: hidden !important;
+		height: 0 !important;
+		overflow: hidden !important;
 	}
 }

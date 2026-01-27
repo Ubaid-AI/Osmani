@@ -432,6 +432,9 @@ class BillingVsExpensesReport {
 			grand_diff_display = (grand_difference < 0 ? '-' : '') + this.format_currency(Math.abs(grand_difference));
 		}
 
+		// Store data for charts
+		this.store_chart_data(months, project_data, projects, grand_totals);
+		
 		const report_html = `
 			<div class="report-header" style="text-align: center; margin-bottom: 20px;">
 				<h1 style="font-size: 18px; margin: 0; font-weight: 700;">OCL ERP Reports</h1>
@@ -480,9 +483,424 @@ class BillingVsExpensesReport {
 				.negative { color: #c0392b; font-weight: 600; }
 				td { text-align: right; }
 			</style>
+			
+			<div class="bve-charts-section">
+				<div class="charts-row">
+					<div class="chart-container">
+						<h4 class="chart-title">Project-wise Billing vs Expenses (3D)</h4>
+						<div id="bve-3d-bar-chart"></div>
+					</div>
+					<div class="chart-container">
+						<h4 class="chart-title">Monthly Trend: Billing vs Expenses</h4>
+						<div id="bve-line-chart"></div>
+					</div>
+				</div>
+				<div class="charts-row" style="margin-top: 15px;">
+					<div class="chart-container">
+						<h4 class="chart-title">Top Projects by Profit Margin</h4>
+						<div id="bve-profit-chart"></div>
+					</div>
+					<div class="chart-container">
+						<h4 class="chart-title">Billing vs Expenses Distribution</h4>
+						<div id="bve-donut-chart"></div>
+					</div>
+				</div>
+			</div>
 		`;
 
 		this.parent.find('.bve-report-content').html(report_html);
+		
+		// Render charts
+		setTimeout(() => this.render_charts(), 100);
+	}
+	
+	store_chart_data(months, project_data, projects, grand_totals) {
+		// Calculate project totals for charts
+		const project_chart_data = [];
+		
+		projects.forEach(project => {
+			let billing = 0;
+			let expense = 0;
+			
+			months.forEach(m => {
+				const data = project_data[project][m.key] || { billing: 0, expense: 0 };
+				billing += data.billing;
+				expense += data.expense;
+			});
+			
+			project_chart_data.push({
+				project,
+				billing,
+				expense,
+				profit: billing - expense
+			});
+		});
+		
+		// Sort by profit descending
+		project_chart_data.sort((a, b) => b.profit - a.profit);
+		
+		this.chart_data = {
+			projects: project_chart_data,
+			months,
+			project_data,
+			grand_totals
+		};
+	}
+	
+	render_charts() {
+		if (!this.chart_data) return;
+		
+		this.render_3d_bar_chart();
+		this.render_line_chart();
+		this.render_profit_chart();
+		this.render_donut_chart();
+	}
+	
+	render_3d_bar_chart() {
+		const container = document.getElementById('bve-3d-bar-chart');
+		if (!container) return;
+		
+		// Get top 8 projects
+		const top_projects = this.chart_data.projects.slice(0, 8);
+		
+		// Find max value for scaling
+		let max_value = 0;
+		top_projects.forEach(p => {
+			max_value = Math.max(max_value, p.billing, p.expense);
+		});
+		
+		let html = '<div class="custom-3d-bar-chart">';
+		html += '<svg viewBox="0 0 500 220" class="bar-svg-3d">';
+		
+		const barWidth = 50;
+		const spacing = 60;
+		const chartHeight = 140;
+		const startX = 40;
+		
+		top_projects.forEach((proj, idx) => {
+			const x = startX + (idx * spacing);
+			const billingHeight = (proj.billing / max_value) * chartHeight;
+			const expenseHeight = (proj.expense / max_value) * chartHeight;
+			
+			// 3D Billing bar
+			const billingY = 160 - billingHeight;
+			html += this.create_3d_bar(x, billingY, 20, billingHeight, '#4CAF50', proj.project, 'Billing', this.format_currency(proj.billing));
+			
+			// 3D Expense bar
+			const expenseY = 160 - expenseHeight;
+			html += this.create_3d_bar(x + 22, expenseY, 20, expenseHeight, '#FF5722', proj.project, 'Expense', this.format_currency(proj.expense));
+			
+			// Project label
+			html += `<text x="${x + 20}" y="185" class="bar-label-3d" text-anchor="middle" transform="rotate(-45 ${x + 20} 185)">${this.truncate_text(proj.project, 12)}</text>`;
+		});
+		
+		// Legend
+		html += `<rect x="50" y="10" width="15" height="15" fill="#4CAF50" class="legend-rect-3d"/>`;
+		html += `<text x="70" y="22" class="legend-text-3d">Billing</text>`;
+		html += `<rect x="140" y="10" width="15" height="15" fill="#FF5722" class="legend-rect-3d"/>`;
+		html += `<text x="160" y="22" class="legend-text-3d">Expense</text>`;
+		
+		html += '</svg></div>';
+		
+		container.innerHTML = html;
+		this.add_tooltip_events(container);
+	}
+	
+	create_3d_bar(x, y, width, height, color, project, type, value) {
+		if (height < 1) return '';
+		
+		// Calculate darker shade for 3D effect
+		const darkColor = this.darken_color(color, 30);
+		const lightColor = this.lighten_color(color, 10);
+		
+		return `
+			<g class="bar-3d" data-project="${project}" data-type="${type}" data-value="${value}">
+				<!-- Front face -->
+				<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${color}" stroke="#fff" stroke-width="0.5"/>
+				<!-- Top face (3D) -->
+				<polygon points="${x},${y} ${x + width},${y} ${x + width + 5},${y - 5} ${x + 5},${y - 5}" fill="${lightColor}" stroke="#fff" stroke-width="0.5"/>
+				<!-- Right face (3D) -->
+				<polygon points="${x + width},${y} ${x + width},${y + height} ${x + width + 5},${y + height - 5} ${x + width + 5},${y - 5}" fill="${darkColor}" stroke="#fff" stroke-width="0.5"/>
+			</g>
+		`;
+	}
+	
+	render_line_chart() {
+		const container = document.getElementById('bve-line-chart');
+		if (!container) return;
+		
+		const months = this.chart_data.months;
+		const grand_totals = this.chart_data.grand_totals;
+		
+		// Get monthly totals
+		const billing_values = months.map(m => grand_totals.billing_by_month[m.key]);
+		const expense_values = months.map(m => grand_totals.expense_by_month[m.key]);
+		
+		const max_value = Math.max(...billing_values, ...expense_values);
+		
+		let html = '<div class="custom-line-chart">';
+		html += '<svg viewBox="0 0 450 200" class="line-svg">';
+		
+		const chartHeight = 140;
+		const chartWidth = 380;
+		const startX = 40;
+		const startY = 150;
+		const pointSpacing = chartWidth / (months.length - 1);
+		
+		// Grid lines
+		for (let i = 0; i <= 4; i++) {
+			const y = startY - (i * chartHeight / 4);
+			html += `<line x1="${startX}" y1="${y}" x2="${startX + chartWidth}" y2="${y}" stroke="#e0e0e0" stroke-width="0.5"/>`;
+		}
+		
+		// Billing line
+		let billingPath = `M ${startX},${startY - (billing_values[0] / max_value * chartHeight)}`;
+		billing_values.forEach((val, idx) => {
+			if (idx > 0) {
+				const x = startX + (idx * pointSpacing);
+				const y = startY - (val / max_value * chartHeight);
+				billingPath += ` L ${x},${y}`;
+			}
+		});
+		html += `<path d="${billingPath}" fill="none" stroke="#4CAF50" stroke-width="3" class="line-path"/>`;
+		
+		// Expense line
+		let expensePath = `M ${startX},${startY - (expense_values[0] / max_value * chartHeight)}`;
+		expense_values.forEach((val, idx) => {
+			if (idx > 0) {
+				const x = startX + (idx * pointSpacing);
+				const y = startY - (val / max_value * chartHeight);
+				expensePath += ` L ${x},${y}`;
+			}
+		});
+		html += `<path d="${expensePath}" fill="none" stroke="#FF5722" stroke-width="3" class="line-path"/>`;
+		
+		// Points and labels
+		billing_values.forEach((val, idx) => {
+			const x = startX + (idx * pointSpacing);
+			const y = startY - (val / max_value * chartHeight);
+			html += `<circle cx="${x}" cy="${y}" r="4" fill="#4CAF50" stroke="white" stroke-width="2" class="line-point" 
+				data-month="${months[idx].label}" data-type="Billing" data-value="${this.format_currency(val)}"/>`;
+		});
+		
+		expense_values.forEach((val, idx) => {
+			const x = startX + (idx * pointSpacing);
+			const y = startY - (val / max_value * chartHeight);
+			html += `<circle cx="${x}" cy="${y}" r="4" fill="#FF5722" stroke="white" stroke-width="2" class="line-point" 
+				data-month="${months[idx].label}" data-type="Expense" data-value="${this.format_currency(val)}"/>`;
+		});
+		
+		// Month labels
+		months.forEach((month, idx) => {
+			const x = startX + (idx * pointSpacing);
+			html += `<text x="${x}" y="175" class="month-label-line" text-anchor="middle">${month.label}</text>`;
+		});
+		
+		// Legend
+		html += `<line x1="50" y1="15" x2="80" y2="15" stroke="#4CAF50" stroke-width="3"/>`;
+		html += `<text x="85" y="20" class="legend-text-3d">Billing</text>`;
+		html += `<line x1="150" y1="15" x2="180" y2="15" stroke="#FF5722" stroke-width="3"/>`;
+		html += `<text x="185" y="20" class="legend-text-3d">Expense</text>`;
+		
+		html += '</svg></div>';
+		
+		container.innerHTML = html;
+		this.add_tooltip_events(container);
+	}
+	
+	render_profit_chart() {
+		const container = document.getElementById('bve-profit-chart');
+		if (!container) return;
+		
+		// Get top 10 by profit
+		const top_projects = this.chart_data.projects
+			.filter(p => p.profit > 0)
+			.slice(0, 10);
+		
+		if (top_projects.length === 0) {
+			container.innerHTML = '<div style="text-align: center; padding: 60px; color: #888;">No profitable projects</div>';
+			return;
+		}
+		
+		const max_profit = Math.max(...top_projects.map(p => p.profit));
+		
+		let html = '<div class="profit-bar-chart">';
+		
+		top_projects.forEach((proj, idx) => {
+			const percentage = (proj.profit / max_profit) * 100;
+			const color = this.get_chart_color(idx);
+			
+			html += `
+				<div class="profit-bar-item">
+					<div class="profit-bar-wrapper">
+						<div class="profit-bar-fill" style="width: ${percentage}%; background: linear-gradient(90deg, ${color}, ${this.lighten_color(color, 20)});"
+							data-project="${proj.project}" data-value="${this.format_currency(proj.profit)}">
+							<span class="profit-project-name">${this.truncate_text(proj.project, 25)}</span>
+							<span class="profit-value">${this.format_currency(proj.profit)}</span>
+						</div>
+					</div>
+				</div>
+			`;
+		});
+		
+		html += '</div>';
+		
+		container.innerHTML = html;
+		this.add_tooltip_events(container);
+	}
+	
+	render_donut_chart() {
+		const container = document.getElementById('bve-donut-chart');
+		if (!container) return;
+		
+		const total_billing = this.chart_data.grand_totals.total_billing;
+		const total_expense = this.chart_data.grand_totals.total_expense;
+		const total = total_billing + total_expense;
+		
+		const billing_percentage = (total_billing / total) * 100;
+		const expense_percentage = (total_expense / total) * 100;
+		
+		// Create donut chart
+		let html = '<div class="custom-donut-chart">';
+		html += '<svg viewBox="0 0 200 200" class="donut-svg">';
+		
+		const radius = 70;
+		const innerRadius = 45;
+		const cx = 100;
+		const cy = 100;
+		
+		// Billing arc
+		const billingPath = this.create_donut_arc(cx, cy, radius, innerRadius, 0, billing_percentage * 3.6);
+		html += `<path d="${billingPath}" fill="#4CAF50" class="donut-slice" 
+			data-label="Billing" data-value="${this.format_currency(total_billing)}" data-percentage="${billing_percentage.toFixed(1)}%"/>`;
+		
+		// Expense arc
+		const expensePath = this.create_donut_arc(cx, cy, radius, innerRadius, billing_percentage * 3.6, 360);
+		html += `<path d="${expensePath}" fill="#FF5722" class="donut-slice" 
+			data-label="Expense" data-value="${this.format_currency(total_expense)}" data-percentage="${expense_percentage.toFixed(1)}%"/>`;
+		
+		// Center text
+		html += `<text x="${cx}" y="${cy - 5}" text-anchor="middle" class="donut-center-label">Total</text>`;
+		html += `<text x="${cx}" y="${cy + 10}" text-anchor="middle" class="donut-center-value">${this.format_currency(total)}</text>`;
+		
+		html += '</svg>';
+		
+		// Legend
+		html += '<div class="donut-legend">';
+		html += `<div class="donut-legend-item">
+			<span class="legend-color" style="background: #4CAF50;"></span>
+			<span>Billing: ${billing_percentage.toFixed(1)}%</span>
+		</div>`;
+		html += `<div class="donut-legend-item">
+			<span class="legend-color" style="background: #FF5722;"></span>
+			<span>Expense: ${expense_percentage.toFixed(1)}%</span>
+		</div>`;
+		html += '</div>';
+		
+		html += '</div>';
+		
+		container.innerHTML = html;
+		this.add_tooltip_events(container);
+	}
+	
+	create_donut_arc(cx, cy, radius, innerRadius, startAngle, endAngle) {
+		const start = this.polar_to_cartesian(cx, cy, radius, endAngle);
+		const end = this.polar_to_cartesian(cx, cy, radius, startAngle);
+		const innerStart = this.polar_to_cartesian(cx, cy, innerRadius, endAngle);
+		const innerEnd = this.polar_to_cartesian(cx, cy, innerRadius, startAngle);
+		const largeArc = endAngle - startAngle <= 180 ? '0' : '1';
+		
+		return [
+			'M', start.x, start.y,
+			'A', radius, radius, 0, largeArc, 0, end.x, end.y,
+			'L', innerEnd.x, innerEnd.y,
+			'A', innerRadius, innerRadius, 0, largeArc, 1, innerStart.x, innerStart.y,
+			'Z'
+		].join(' ');
+	}
+	
+	polar_to_cartesian(cx, cy, radius, angle) {
+		const rad = (angle - 90) * Math.PI / 180;
+		return {
+			x: cx + radius * Math.cos(rad),
+			y: cy + radius * Math.sin(rad)
+		};
+	}
+	
+	add_tooltip_events(container) {
+		const tooltip = document.createElement('div');
+		tooltip.className = 'chart-tooltip';
+		tooltip.style.display = 'none';
+		container.appendChild(tooltip);
+		
+		const showTooltip = (e) => {
+			const target = e.target.closest('[data-project], [data-month], [data-label]');
+			if (!target) return;
+			
+			let text = '';
+			if (target.dataset.project) {
+				text = `<strong>${target.dataset.project}</strong><br>${target.dataset.type}: ${target.dataset.value}`;
+			} else if (target.dataset.month) {
+				text = `<strong>${target.dataset.month}</strong><br>${target.dataset.type}: ${target.dataset.value}`;
+			} else if (target.dataset.label) {
+				text = `<strong>${target.dataset.label}</strong><br>${target.dataset.value}<br>(${target.dataset.percentage})`;
+			}
+			
+			tooltip.innerHTML = text;
+			tooltip.style.display = 'block';
+		};
+		
+		const moveTooltip = (e) => {
+			const rect = container.getBoundingClientRect();
+			tooltip.style.left = (e.clientX - rect.left + 10) + 'px';
+			tooltip.style.top = (e.clientY - rect.top + 10) + 'px';
+		};
+		
+		const hideTooltip = () => {
+			tooltip.style.display = 'none';
+		};
+		
+		container.addEventListener('mouseenter', showTooltip, true);
+		container.addEventListener('mousemove', moveTooltip, true);
+		container.addEventListener('mouseleave', hideTooltip, true);
+	}
+	
+	truncate_text(text, maxLength) {
+		if (text.length <= maxLength) return text;
+		return text.substring(0, maxLength) + '...';
+	}
+	
+	darken_color(color, percent) {
+		const num = parseInt(color.replace('#', ''), 16);
+		const amt = Math.round(2.55 * percent);
+		const R = (num >> 16) - amt;
+		const G = (num >> 8 & 0x00FF) - amt;
+		const B = (num & 0x0000FF) - amt;
+		return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+			(G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+			(B < 255 ? B < 1 ? 0 : B : 255))
+			.toString(16).slice(1);
+	}
+	
+	lighten_color(color, percent) {
+		const num = parseInt(color.replace('#', ''), 16);
+		const amt = Math.round(2.55 * percent);
+		const R = (num >> 16) + amt;
+		const G = (num >> 8 & 0x00FF) + amt;
+		const B = (num & 0x0000FF) + amt;
+		return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+			(G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+			(B < 255 ? B < 1 ? 0 : B : 255))
+			.toString(16).slice(1);
+	}
+	
+	get_chart_color(index) {
+		const colors = [
+			'#667eea', '#764ba2', '#f093fb', '#4facfe', '#43e97b',
+			'#fa709a', '#fee140', '#30cfd0', '#a8edea', '#ff6a88',
+			'#feca57', '#48dbfb', '#ff9ff3', '#54a0ff', '#00d2d3'
+		];
+		return colors[index % colors.length];
 	}
 
 	get_months_between(from_date, to_date) {
@@ -647,7 +1065,14 @@ class BillingVsExpensesReport {
 			return;
 		}
 
-		const content = report_content.innerHTML;
+		// Clone the content and remove charts section
+		const clone = report_content.cloneNode(true);
+		const chartsSection = clone.querySelector('.bve-charts-section');
+		if (chartsSection) {
+			chartsSection.remove();
+		}
+		
+		const content = clone.innerHTML;
 
 		const printWindow = window.open('', '_blank');
 		printWindow.document.write(`
@@ -657,53 +1082,118 @@ class BillingVsExpensesReport {
 				<meta charset="utf-8">
 				<title>Billing Vs Expenses - Project Wise</title>
 				<style>
+					@page {
+						size: landscape;
+						margin: 15mm;
+					}
+					
 					body {
 						font-family: Arial, sans-serif;
-						font-size: 12px;
-						color: #111;
-						margin: 20px;
+						font-size: 9px;
+						color: #000;
+						margin: 0;
+						padding: 0;
+						width: 100%;
+						max-width: 100%;
 					}
+					
+					.report-header {
+						text-align: center;
+						margin-bottom: 15px;
+					}
+					
+					.report-header h1 {
+						font-size: 14px;
+						margin: 0;
+						font-weight: 700;
+						color: #000;
+					}
+					
+					.report-header h2 {
+						font-size: 12px;
+						margin: 5px 0;
+						font-weight: 600;
+						color: #000;
+					}
+					
+					.report-header h3 {
+						font-size: 10px;
+						margin: 3px 0;
+						font-weight: 500;
+						color: #000;
+					}
+					
+					.report-meta {
+						text-align: right;
+						font-size: 9px;
+						margin-bottom: 10px;
+						color: #000;
+					}
+					
 					table {
 						width: 100%;
 						border-collapse: collapse;
-						margin-top: 15px;
+						margin-top: 10px;
+						font-size: 8px;
 					}
+					
 					th, td {
 						border: 1px solid #333;
-						padding: 8px;
+						padding: 4px 6px;
 						vertical-align: middle;
 					}
+					
 					th {
 						background-color: #f4f6f8;
 						font-weight: 600;
 						text-align: center;
+						color: #000;
 					}
+					
 					td {
 						text-align: right;
+						color: #000;
 					}
+					
 					.project {
 						text-align: left;
 						font-weight: 600;
+						color: #000;
 					}
+					
 					.total-col {
 						background-color: #fafafa;
 						font-weight: 600;
 					}
+					
 					.positive {
 						color: #0a7a2f;
 						font-weight: 600;
 					}
+					
 					.negative {
 						color: #c0392b;
 						font-weight: 600;
 					}
+					
 					tfoot tr {
 						background-color: #e9ecef;
 						font-weight: 700;
 					}
-					@media print {
-						body { margin: 10mm; }
-						@page { size: A4 landscape; margin: 10mm; }
+					
+					tfoot td {
+						font-weight: 700;
+						color: #000;
+					}
+					
+					/* Hide any charts if present */
+					.bve-charts-section {
+						display: none !important;
+					}
+					
+					/* Ensure content fits page */
+					* {
+						box-sizing: border-box;
 					}
 				</style>
 			</head>
