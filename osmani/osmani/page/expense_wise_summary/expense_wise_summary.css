@@ -51,6 +51,7 @@
 	margin-bottom: 20px;
 	padding-bottom: 15px;
 	border-bottom: 2px solid #d1d8dd;
+	position: relative;
 }
 
 .ews-report-header h1 {
@@ -58,26 +59,30 @@
 	font-size: 18px;
 	font-weight: 700;
 	letter-spacing: 0.4px;
+	color: #000;
 }
 
 .ews-report-header h2 {
 	margin: 6px 0;
 	font-size: 14px;
 	font-weight: 600;
+	color: #000;
 }
 
 .ews-report-header h3 {
 	margin: 4px 0;
 	font-size: 12px;
 	font-weight: 500;
-	color: #666;
+	color: #000;
 }
 
 .ews-report-meta {
+	position: absolute;
+	right: 0;
+	top: 0;
 	text-align: right;
 	font-size: 11px;
-	color: #666;
-	margin-top: 10px;
+	color: #000;
 }
 
 /* Table Styles */
@@ -86,6 +91,7 @@
 	border-collapse: collapse;
 	font-size: 13px;
 	margin-top: 15px;
+	color: #000;
 }
 
 .ews-report-content th {
@@ -95,6 +101,7 @@
 	font-weight: 600;
 	border: 1px solid #333;
 	white-space: nowrap;
+	color: #000;
 }
 
 .ews-report-content th.account-header {
@@ -106,30 +113,36 @@
 	border: 1px solid #333;
 	text-align: right;
 	white-space: nowrap;
+	color: #000;
 }
 
 .ews-report-content td.account-name {
 	text-align: left;
 	cursor: pointer;
 	user-select: none;
+	color: #000;
 }
 
 /* Hierarchy Styles */
 .account-group {
 	font-weight: 700;
 	background-color: #fafafa;
+	color: #000;
 }
 
 .account-group .account-name {
 	font-weight: 700;
+	color: #000;
 }
 
 .account-child {
 	background-color: white;
+	color: #000;
 }
 
 .account-child .account-name {
 	font-weight: normal;
+	color: #000;
 }
 
 /* Indentation is now handled inline with style="padding-left" */
@@ -159,15 +172,18 @@
 .total-col {
 	font-weight: 600;
 	background-color: #fafafa;
+	color: #000;
 }
 
 .total-row {
 	font-weight: 700;
 	background-color: #e9ecef;
+	color: #000;
 }
 
 .total-row td {
 	font-weight: 700;
+	color: #000;
 }
 
 /* Hidden rows */
@@ -206,6 +222,14 @@
 	.ews-report-content table {
 		page-break-inside: auto;
 		font-size: 10px;
+		color: #000 !important;
+	}
+	
+	.ews-report-header h1,
+	.ews-report-header h2,
+	.ews-report-header h3,
+	.ews-report-meta {
+		color: #000 !important;
 	}
 	
 	.ews-report-content tr {
@@ -246,6 +270,7 @@
 	.ews-report-content td {
 		padding: 4px 6px;
 		font-size: 9px;
+		color: #000 !important;
 	}
 	
 	.account-name {

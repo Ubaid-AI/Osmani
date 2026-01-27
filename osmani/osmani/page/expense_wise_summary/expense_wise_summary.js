@@ -219,11 +219,24 @@ class ExpenseWiseSummaryReport {
 		
 		const date_range = `From ${this.format_date(this.filters.from_date)} To ${this.format_date(this.filters.to_date)}`;
 		
+		// Get current datetime for "Report on"
+		const now = new Date();
+		const report_datetime = this.format_datetime(now);
+		
+		// Build project names if filtered
+		let project_line = '';
+		if (this.filters.projects && this.filters.projects.length > 0) {
+			const project_names = this.filters.projects.join(', ');
+			project_line = `<h3>Project: ${project_names}</h3>`;
+		}
+		
 		const html = `
 			<div class="ews-report-header">
+				<div class="ews-report-meta">Report on: <strong>${report_datetime}</strong></div>
 				<h1>OCL ERP REPORT</h1>
 				<h2>Expense Wise Summary</h2>
 				<h3>${date_range}</h3>
+				${project_line}
 			</div>
 			<table>
 				<thead>
@@ -410,6 +423,16 @@ class ExpenseWiseSummaryReport {
 		const month = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
 		const year = d.getFullYear();
 		return `${day}-${month}-${year}`;
+	}
+
+	format_datetime(date_obj) {
+		const day = String(date_obj.getDate()).padStart(2, '0');
+		const month = date_obj.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+		const year = date_obj.getFullYear();
+		const hours = String(date_obj.getHours()).padStart(2, '0');
+		const minutes = String(date_obj.getMinutes()).padStart(2, '0');
+		const seconds = String(date_obj.getSeconds()).padStart(2, '0');
+		return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 	}
 
 	export_to_excel() {
