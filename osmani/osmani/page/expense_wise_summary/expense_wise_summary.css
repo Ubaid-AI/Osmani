@@ -1,0 +1,257 @@
+/* Expense Wise Summary Page Styles */
+
+.ews-page-content {
+	padding: 20px;
+	background: #f8f9fa;
+}
+
+/* Filter Section */
+.ews-filters {
+	background: white;
+	padding: 20px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	margin-bottom: 20px;
+}
+
+.ews-filters .row {
+	display: flex;
+	align-items: flex-end;
+}
+
+.ews-filters label {
+	display: block;
+	font-weight: 600;
+	margin-bottom: 6px;
+	font-size: 12px;
+	color: #333;
+}
+
+.ews-date-field,
+.ews-project-field {
+	width: 100%;
+}
+
+.ews-filters .btn {
+	white-space: nowrap;
+}
+
+/* Report Content */
+.ews-report-content {
+	background: white;
+	padding: 30px;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+	overflow-x: auto;
+}
+
+/* Report Header */
+.ews-report-header {
+	text-align: center;
+	margin-bottom: 20px;
+	padding-bottom: 15px;
+	border-bottom: 2px solid #d1d8dd;
+}
+
+.ews-report-header h1 {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 700;
+	letter-spacing: 0.4px;
+}
+
+.ews-report-header h2 {
+	margin: 6px 0;
+	font-size: 14px;
+	font-weight: 600;
+}
+
+.ews-report-header h3 {
+	margin: 4px 0;
+	font-size: 12px;
+	font-weight: 500;
+	color: #666;
+}
+
+.ews-report-meta {
+	text-align: right;
+	font-size: 11px;
+	color: #666;
+	margin-top: 10px;
+}
+
+/* Table Styles */
+.ews-report-content table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+	margin-top: 15px;
+}
+
+.ews-report-content th {
+	background: #f4f6f8;
+	padding: 10px 8px;
+	text-align: center;
+	font-weight: 600;
+	border: 1px solid #333;
+	white-space: nowrap;
+}
+
+.ews-report-content th.account-header {
+	text-align: left;
+}
+
+.ews-report-content td {
+	padding: 6px 8px;
+	border: 1px solid #333;
+	text-align: right;
+	white-space: nowrap;
+}
+
+.ews-report-content td.account-name {
+	text-align: left;
+	cursor: pointer;
+	user-select: none;
+}
+
+/* Hierarchy Styles */
+.account-group {
+	font-weight: 700;
+	background-color: #fafafa;
+}
+
+.account-group .account-name {
+	font-weight: 700;
+}
+
+.account-child {
+	background-color: white;
+}
+
+.account-child .account-name {
+	font-weight: normal;
+}
+
+/* Indentation is now handled inline with style="padding-left" */
+
+/* Expand/Collapse Icons */
+.expand-icon {
+	display: inline-block;
+	width: 16px;
+	margin-right: 5px;
+	font-weight: bold;
+	color: #666;
+}
+
+.expand-icon.collapsed::before {
+	content: '▶';
+}
+
+.expand-icon.expanded::before {
+	content: '▼';
+}
+
+.no-children {
+	margin-left: 21px;
+}
+
+/* Total Styles */
+.total-col {
+	font-weight: 600;
+	background-color: #fafafa;
+}
+
+.total-row {
+	font-weight: 700;
+	background-color: #e9ecef;
+}
+
+.total-row td {
+	font-weight: 700;
+}
+
+/* Hidden rows */
+.hidden-row {
+	display: none;
+}
+
+/* Zero value rows - hidden by default */
+.zero-value-row {
+	display: none;
+}
+
+/* Print Styles */
+@media print {
+	.ews-filters,
+	.page-head,
+	.page-actions,
+	.page-title,
+	.navbar,
+	.sidebar-wrapper,
+	.layout-side-section {
+		display: none !important;
+	}
+	
+	.ews-page-content {
+		padding: 0;
+		background: white;
+	}
+	
+	.ews-report-content {
+		box-shadow: none;
+		padding: 10mm;
+		overflow: visible;
+	}
+	
+	.ews-report-content table {
+		page-break-inside: auto;
+		font-size: 10px;
+	}
+	
+	.ews-report-content tr {
+		page-break-inside: avoid;
+		page-break-after: auto;
+	}
+	
+	.ews-report-content thead {
+		display: table-header-group;
+	}
+	
+	.ews-report-content tfoot {
+		display: table-footer-group;
+	}
+	
+	body {
+		margin: 0;
+		padding: 0;
+	}
+	
+	/* Show all rows when printing - ignore collapse state */
+	.hidden-row {
+		display: table-row !important;
+	}
+	
+	/* Fit to page width */
+	@page {
+		size: A4 landscape;
+		margin: 10mm;
+	}
+	
+	.ews-report-content table {
+		width: 100%;
+		max-width: 100%;
+	}
+	
+	.ews-report-content th,
+	.ews-report-content td {
+		padding: 4px 6px;
+		font-size: 9px;
+	}
+	
+	.account-name {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: 300px;
+	}
+}

@@ -1,0 +1,19 @@
+{
+ "content": null,
+ "creation": "2026-01-24 13:15:51.818908",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-01-24 13:15:51.818908",
+ "modified_by": "Administrator",
+ "module": "Osmani",
+ "name": "expense-wise-summary",
+ "owner": "Administrator",
+ "page_name": "expense-wise-summary",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Expense Wise Summary"
+}
