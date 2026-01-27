@@ -1,7 +1,7 @@
 [
  {
   "charts": [],
-  "content": "[{\"id\":\"VUcq2u1tkF\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Company Information\",\"col\":12}},{\"id\":\"lLbLk1Z9GX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Account Freeze Rule\",\"col\":3}},{\"id\":\"ylu1hyBy30\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Record Filter\",\"col\":3}}]",
+  "content": "[{\"id\":\"VUcq2u1tkF\",\"type\":\"custom_block\",\"data\":{\"custom_block_name\":\"Company Information\",\"col\":12}},{\"id\":\"lLbLk1Z9GX\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Account Freeze Rule\",\"col\":3}},{\"id\":\"ylu1hyBy30\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Record Filter\",\"col\":3}},{\"id\":\"vqiKxz0O3v\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"User Entries Summary\",\"col\":3}},{\"id\":\"AZGMRQktna\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Realtime Dashboard\",\"col\":3}},{\"id\":\"PH9YWyd4kA\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Overall Billing Summary\",\"col\":3}},{\"id\":\"rA0RJmsoTm\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Expense Wise Summary\",\"col\":3}},{\"id\":\"g3pdfflTY5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Billing Vs Expenses\",\"col\":3}}]",
   "custom_blocks": [
    {
     "custom_block_name": "Company Information",
@@ -20,7 +20,7 @@
   "is_hidden": 0,
   "label": "OCL",
   "links": [],
-  "modified": "2026-01-22 10:19:52.895141",
+  "modified": "2026-01-27 17:52:12.799006",
   "module": null,
   "name": "OCL",
   "number_cards": [],
@@ -33,11 +33,27 @@
     "parent": "OCL",
     "parentfield": "roles",
     "parenttype": "Workspace",
-    "role": "System Manager"
+    "role": "OCL"
    }
   ],
   "sequence_id": 39.0,
   "shortcuts": [
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "User Entries Summary",
+    "link_to": "user-entries-summary",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
    {
     "color": "Grey",
     "doc_view": "List",
@@ -68,6 +84,70 @@
     "restrict_to_domain": null,
     "stats_filter": "[]",
     "type": "DocType",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Realtime Dashboard",
+    "link_to": "realtime-dashboard",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Overall Billing Summary",
+    "link_to": "overall-billing-summary",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Expense Wise Summary",
+    "link_to": "expense-wise-summary",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
+    "url": null
+   },
+   {
+    "color": "Grey",
+    "doc_view": "List",
+    "format": null,
+    "icon": null,
+    "kanban_board": null,
+    "label": "Billing Vs Expenses",
+    "link_to": "billing-vs-expenses",
+    "parent": "OCL",
+    "parentfield": "shortcuts",
+    "parenttype": "Workspace",
+    "restrict_to_domain": null,
+    "stats_filter": null,
+    "type": "Page",
     "url": null
    }
   ],
