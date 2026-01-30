@@ -1,0 +1,422 @@
+/* Server Health Dashboard Styles */
+
+/* Ensure Font Awesome Icons Display Correctly */
+.fas, .fa {
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    font-style: normal !important;
+    display: inline-block !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+.fa::before, .fas::before {
+    display: inline-block !important;
+}
+
+.server-health-dashboard {
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+    min-height: 100vh;
+}
+
+/* Health Cards */
+.health-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    height: 100%;
+}
+
+.health-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
+}
+
+.health-card-icon {
+    width: 60px;
+    min-width: 60px;
+    height: 60px;
+    min-height: 60px;
+    border-radius: 12px;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #ffffff !important;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+    overflow: visible;
+}
+
+.health-card-icon i,
+.health-card-icon .fas,
+.health-card-icon .fa {
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    display: inline-block !important;
+    color: #ffffff !important;
+    font-size: 28px !important;
+    z-index: 2 !important;
+    line-height: 1 !important;
+}
+
+.cpu-icon {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.memory-icon {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.disk-icon {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.db-icon {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.health-card-content {
+    flex: 1;
+}
+
+.health-card-label {
+    font-size: 13px;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.health-card-value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #2f2f2f;
+    line-height: 1;
+}
+
+/* Info Panels */
+.info-panel {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    height: 100%;
+}
+
+.info-panel h5 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #2f2f2f;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.info-panel h5 i,
+.info-panel h5 .fas,
+.info-panel h5 .fa {
+    margin-right: 8px;
+    color: #667eea;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    display: inline-block !important;
+}
+
+.info-panel table {
+    margin-bottom: 0;
+}
+
+.info-panel table td {
+    padding: 10px 12px;
+    border: none;
+    vertical-align: middle;
+}
+
+.info-panel table td:first-child {
+    color: #6c757d;
+    font-weight: 500;
+    width: 40%;
+}
+
+.info-panel table td:last-child {
+    font-weight: 600;
+    color: #2f2f2f;
+}
+
+/* Highlighted value badges */
+.value-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(102, 126, 234, 0.3);
+    white-space: nowrap;
+    transition: all 0.3s ease;
+}
+
+.value-badge:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.4);
+}
+
+.value-badge.success {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    box-shadow: 0 2px 4px rgba(67, 233, 123, 0.3);
+}
+
+.value-badge.success:hover {
+    box-shadow: 0 4px 8px rgba(67, 233, 123, 0.4);
+}
+
+.value-badge.warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    box-shadow: 0 2px 4px rgba(240, 147, 251, 0.3);
+}
+
+.value-badge.warning:hover {
+    box-shadow: 0 4px 8px rgba(240, 147, 251, 0.4);
+}
+
+.value-badge.info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    box-shadow: 0 2px 4px rgba(79, 172, 254, 0.3);
+}
+
+.value-badge.info:hover {
+    box-shadow: 0 4px 8px rgba(79, 172, 254, 0.4);
+}
+
+/* Smaller badges for table cells */
+.table td .value-badge {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.info-panel table tr {
+    border-bottom: 1px solid #f1f3f5;
+}
+
+.info-panel table tr:last-child {
+    border-bottom: none;
+}
+
+/* Progress Bars */
+.progress {
+    background-color: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.6s ease, background-color 0.3s ease;
+}
+
+/* Badges */
+.badge {
+    padding: 4px 8px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px;
+}
+
+/* Service Cards */
+.service-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    border-left: 4px solid #667eea;
+    transition: all 0.3s ease;
+}
+
+.service-card:hover {
+    background: #e9ecef;
+    transform: translateX(4px);
+}
+
+.service-card i,
+.service-card .fas,
+.service-card .fa {
+    margin-right: 8px;
+    color: #667eea;
+    font-family: "Font Awesome 5 Free" !important;
+    font-weight: 900 !important;
+    display: inline-block !important;
+}
+
+.service-card strong {
+    color: #2f2f2f;
+    font-size: 14px;
+}
+
+.service-card .badge {
+    margin-left: 8px;
+}
+
+/* Tables */
+.table-responsive {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.table {
+    margin-bottom: 0;
+}
+
+.table thead th {
+    background: #f8f9fa;
+    color: #2f2f2f;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e9ecef;
+    padding: 12px;
+}
+
+.table tbody td {
+    padding: 12px;
+    vertical-align: middle;
+    color: #495057;
+    font-size: 14px;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Alert Info - BLACK BACKGROUND WITH WHITE TEXT - HIGHEST PRIORITY */
+.server-health-dashboard .alert-info,
+.server-health-dashboard .alert.alert-info,
+div.server-health-dashboard .alert-info,
+.page-body .server-health-dashboard .alert-info {
+    background: #000000 !important;
+    background-color: #000000 !important;
+    background-image: none !important;
+    border: none !important;
+    color: #ffffff !important;
+    border-radius: 12px !important;
+    padding: 15px 20px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.server-health-dashboard .alert-info *,
+.server-health-dashboard .alert-info i,
+.server-health-dashboard .alert-info .fa,
+.server-health-dashboard .alert-info .fas {
+    color: #ffffff !important;
+}
+
+.server-health-dashboard .alert-info span,
+.server-health-dashboard .alert-info .float-right,
+.server-health-dashboard .alert-info small,
+.server-health-dashboard .alert-info p {
+    color: #ffffff !important;
+}
+
+/* Loading State */
+#health-loading {
+    padding: 100px 20px;
+}
+
+.spinner-border {
+    width: 3rem;
+    height: 3rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .health-card {
+        margin-bottom: 15px;
+    }
+    
+    .health-card-value {
+        font-size: 24px;
+    }
+    
+    .health-card-icon {
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+    
+    .info-panel {
+        margin-bottom: 15px;
+    }
+    
+    .service-card {
+        margin-bottom: 10px;
+    }
+}
+
+/* Animations */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+.health-card-icon i {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Status Colors */
+.text-success {
+    color: #28a745 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+.bg-success {
+    background-color: #28a745 !important;
+}
+
+.bg-warning {
+    background-color: #ffc107 !important;
+}
+
+.bg-danger {
+    background-color: #dc3545 !important;
+}
+
+.badge-success {
+    background-color: #28a745;
+    color: #ffffff;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
