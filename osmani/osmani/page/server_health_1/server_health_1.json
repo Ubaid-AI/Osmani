@@ -1,0 +1,19 @@
+{
+ "content": null,
+ "creation": "2026-01-30 11:53:24.892957",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-01-30 11:53:24.892957",
+ "modified_by": "Administrator",
+ "module": "Osmani",
+ "name": "server-health-1",
+ "owner": "Administrator",
+ "page_name": "server-health-1",
+ "roles": [],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Server Health"
+}
